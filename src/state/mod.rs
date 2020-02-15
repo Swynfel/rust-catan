@@ -1,5 +1,7 @@
 mod display;
+mod pretty_terminal_display;
 
+pub use pretty_terminal_display::pretty_terminal_display;
 use crate::utils::{Resource, Hex, CoordType, Harbor};
 use crate::board::{map, Map as BoardMap, Layout as BoardLayout};
 

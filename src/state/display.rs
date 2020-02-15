@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::utils::{Hex, LandHex, Harbor, CoordType};
+use crate::utils::{Hex, LandHex, Harbor, CoordType, ToDrawType};
 use crate::state::BoardState;
 
 fn hex(hex: Option<&Hex>, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
@@ -12,7 +12,7 @@ fn hex(hex: Option<&Hex>, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fm
                     write!(f, " [ D ] ")
                 },
                 LandHex::Prod(res, v) => {
-                    write!(f, " [{:>2}{}] ", v, res.letter())
+                    write!(f, " [{:>2}{}] ", v, res.to_draw_type().letter())
                 },
             },
         },
@@ -32,7 +32,7 @@ fn intersection(harbor: Option<&Harbor>, f: &mut std::fmt::Formatter<'_>) -> Res
     match harbor {
         Some(h) => match h {
             Harbor::Special(res) => {
-                write!(f, "{0} {0}", res.letter())
+                write!(f, "{0} {0}", res.to_draw_type().letter())
             },
             Harbor::Generic => {
                 write!(f, "X X")

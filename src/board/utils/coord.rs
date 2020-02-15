@@ -10,6 +10,17 @@ pub enum Type {
     Intersection,
 }
 
+pub enum DetailedType {
+    LVoid,
+    RVoid,
+    OHex,
+    SPath,
+    ZPath,
+    IPath,
+    VIntersection,
+    AIntersection,
+}
+
 #[derive(Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Coord {
     pub x: i8,
@@ -46,6 +57,20 @@ impl Coord {
         (x_r as u8, y_r as u8)
     }
 
+    pub(crate) fn get_detailed_type(&self) -> DetailedType {
+        match self.get_hash() {
+            (0,0) => DetailedType::OHex,
+            (1,0) => DetailedType::RVoid,
+            (2,0) => DetailedType::IPath,
+            (3,0) => DetailedType::LVoid,
+            (0,1) => DetailedType::AIntersection,
+            (1,1) => DetailedType::ZPath,
+            (2,1) => DetailedType::VIntersection,
+            (3,1) => DetailedType::SPath,
+            _ => panic!("Coord has incoherent hash"),
+        }
+    }
+
     pub fn get_type(&self) -> Type {
         match self.get_hash() {
             (0,0) => Type::Hex,
@@ -61,5 +86,16 @@ impl Coord {
             (1,1) | (3,1) => Ok([Coord::new(self.x - 1, self.y), Coord::new(self.x + 1, self.y)]),
             _ => Err(Error::InvalidCoord(*self)),
         }
+    }
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", match self {
+            Type::Void => "V",
+            Type::Hex => "H",
+            Type::Path => "P",
+            Type::Intersection => "I",
+        })
     }
 }

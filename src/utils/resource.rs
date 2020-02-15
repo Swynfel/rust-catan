@@ -21,16 +21,6 @@ impl Resource {
         Resource::Grain,
         Resource::Wool,
     ];
-
-    pub fn letter(&self) -> char {
-        match self {
-            Resource::Brick => 'B',
-            Resource::Lumber => 'L',
-            Resource::Ore => 'O',
-            Resource::Grain => 'G',
-            Resource::Wool => 'W',
-        }
-    }
 }
 
 impl TryFrom<u8> for Resource {

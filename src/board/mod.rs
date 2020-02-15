@@ -6,5 +6,5 @@ pub mod setup;
 
 pub use layout::Layout;
 pub use error::Error;
-pub use utils::{Coord, CoordType};
+pub use utils::{Coord, CoordType, DetailedCoordType};
 pub use map::BoxedMap as Map;

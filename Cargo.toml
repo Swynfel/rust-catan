@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 rand = "0.7"
 once_cell = "1.3"
+termion = "1.5"
