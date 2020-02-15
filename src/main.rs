@@ -1,12 +1,20 @@
 mod board;
 mod state;
-mod constants;
-mod error;
 mod game;
+mod utils;
+
+use std::thread;
 
 fn main() {
-    let g = game::generate_new_state();
-    println!("Generated Catan Game");
-
-    println!("{}", g.board);
+    let mut threads = Vec::new();
+    for _ in 0..10 {
+        threads.push(
+            thread::spawn( ||
+                println!("{}", board::setup::random_default().board)
+            )
+        );
+    }
+    for thread in threads {
+        thread.join().unwrap();
+    }
 }
