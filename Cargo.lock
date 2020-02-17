@@ -15,6 +15,14 @@ version = "0.0.0"
 dependencies = [
  "once_cell",
  "rand",
+]
+
+[[package]]
+name = "catan-player"
+version = "0.1.0"
+dependencies = [
+ "catan",
+ "once_cell",
  "termion",
 ]
 
