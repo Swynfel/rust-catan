@@ -90,9 +90,9 @@ impl Coord {
             (2,0) => DetailedType::IPath,
             (3,0) => DetailedType::LVoid,
             (0,1) => DetailedType::AIntersection,
-            (1,1) => DetailedType::ZPath,
+            (1,1) => DetailedType::SPath,
             (2,1) => DetailedType::VIntersection,
-            (3,1) => DetailedType::SPath,
+            (3,1) => DetailedType::ZPath,
             _ => panic!("Coord has incoherent hash"),
         }
     }

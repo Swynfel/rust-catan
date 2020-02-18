@@ -1,4 +1,4 @@
-use catan::state::Player;
+use catan::state::PlayerId;
 use once_cell::sync::Lazy;
 use termion::color;
 use termion::color::AnsiValue;
@@ -124,7 +124,7 @@ impl ToDrawType for Resource {
      }
 }
 
-pub fn player_bg_color(player: Player) -> AnsiValue {
+pub fn player_bg_color(player: PlayerId) -> AnsiValue {
     match player {
         0 => AnsiValue::rgb(5, 1, 1),
         1 => AnsiValue::rgb(1, 1, 5),
@@ -134,7 +134,7 @@ pub fn player_bg_color(player: Player) -> AnsiValue {
     }
 }
 
-pub fn player_letter(player: Player) -> char {
+pub fn player_letter(player: PlayerId) -> char {
     match player {
         0 => 'r',
         1 => 'b',
@@ -144,6 +144,6 @@ pub fn player_letter(player: Player) -> char {
     }
 }
 
-pub fn player_color(player: Player) -> String {
+pub fn player_color(player: PlayerId) -> String {
     format!("{}{}", color::Bg(player_bg_color(player)), color::Fg(*BLACK))
 }

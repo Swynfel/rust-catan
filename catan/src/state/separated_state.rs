@@ -3,7 +3,7 @@ use crate::board::map::{OptionLayerMap, BoardMap};
 use crate::board::Layout;
 use crate::utils::{Hex, Harbor, Coord, CoordType};
 use super::PlayerHand;
-use super::{State, StateMaker, Error, Player};
+use super::{State, StateMaker, Error, PlayerId};
 
 pub struct SeparatedState<'a> {
     layout: &'a Layout,
@@ -47,6 +47,10 @@ impl State for SeparatedState<'_> {
         self.players.len() as u8
     }
 
+    fn get_player_hand(&self, player: PlayerId) -> PlayerHand {
+        self.players[player as usize]
+    }
+
     /*** static ***/
     fn set_static_hex(&mut self, coord: Coord, hex: Hex) -> Result<(), Error>{
         Ok(self.hexes.set_value(coord, hex)?)
@@ -65,19 +69,19 @@ impl State for SeparatedState<'_> {
     }
 
     /*** dynamic ***/
-    fn set_dynamic_path(&mut self, coord: Coord, player: Player) -> Result<(), Error>{
+    fn set_dynamic_path(&mut self, coord: Coord, player: PlayerId) -> Result<(), Error>{
         Ok(self.paths.set_value(coord, Some(player))?)
     }
 
-    fn get_dynamic_path(&self, coord: Coord) -> Result<Option<Player>, Error>{
+    fn get_dynamic_path(&self, coord: Coord) -> Result<Option<PlayerId>, Error>{
         Ok(*self.paths.get_value(coord)?)
     }
 
-    fn set_dynamic_intersection(&mut self, coord: Coord, player: Player, is_city: bool) -> Result<(), Error>{
+    fn set_dynamic_intersection(&mut self, coord: Coord, player: PlayerId, is_city: bool) -> Result<(), Error>{
         Ok(self.intersections.set_value(coord, Some((player, is_city)))?)
     }
 
-    fn get_dynamic_intersection(&self, coord: Coord) -> Result<Option<(Player, bool)>, Error>{
+    fn get_dynamic_intersection(&self, coord: Coord) -> Result<Option<(PlayerId, bool)>, Error>{
         Ok(*self.intersections.get_value(coord)?)
     }
 }

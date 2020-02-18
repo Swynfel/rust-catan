@@ -18,7 +18,7 @@ pub trait Topology {
 
     fn intersection_hex_neighbours(&self, coord: Coord) -> TopologyResult;
     fn intersection_path_neighbours(&self, coord: Coord) -> TopologyResult;
-    fn intersection_intersection_neighbours(&self, coord: Coord) -> TopologyResult;
+    fn intersection_intersection_neighbours<'a>(&self, coord: Coord) -> TopologyResult;
 }
 
 pub struct CoordTopology;
@@ -30,7 +30,7 @@ fn c(x: i8, y: i8) -> Coord {
 impl RawTopology for CoordTopology {
     fn neighbours(&self, coord :Coord, center_type: CoordType, neighbour_type: CoordType) -> TopologyResult {
         if coord.get_type() != center_type {
-            return Err(Error::WrongCoordType { expected: center_type,  received: coord.get_type()});
+            return Err(Error::WrongCoordTypeSingle (center_type,  coord.get_type()));
         }
         let x = coord.x;
         let y = coord.y;
@@ -52,7 +52,7 @@ impl RawTopology for CoordTopology {
             (DetailedCoordType::AIntersection, CoordType::Hex) => vec![c(x+2,y+1), c(x-2,y+1), c(x,y-1)],
             (DetailedCoordType::VIntersection, CoordType::Hex) => vec![c(x,y+1), c(x-2,y-1), c(x+2,y-1)],
             (DetailedCoordType::AIntersection, CoordType::Path) => vec![c(x+1,y), c(x,y+1), c(x-1,y)],
-            (DetailedCoordType::VIntersection, CoordType::Path) => vec![c(x,y+1), c(x-1,y), c(x-1,y)],
+            (DetailedCoordType::VIntersection, CoordType::Path) => vec![c(x+1,y), c(x-1,y), c(x,y-1)],
             (DetailedCoordType::AIntersection, CoordType::Intersection) => vec![c(x+2,y), c(x,y+2), c(x-2,y)],
             (DetailedCoordType::VIntersection, CoordType::Intersection) => vec![c(x,y+2), c(x-2,y), c(x-2,y)],
 

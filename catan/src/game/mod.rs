@@ -12,3 +12,8 @@ pub enum Phase {
     Turn(u8,bool,bool), //(player,dice_rolled,dvp_card_played)
     FinishedGame(u8), //(winning_player)
 }
+
+impl Phase {
+    pub const START_GAME: Phase = Phase::InitialPlacement(0,false,false);
+    pub const START_TURNS: Phase = Phase::Turn(0,false,false);
+}

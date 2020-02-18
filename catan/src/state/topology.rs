@@ -2,7 +2,7 @@ use super::State;
 use crate::board::utils::topology::{Topology, RawTopology, TopologyResult};
 use crate::board::{Coord, CoordType, Error};
 
-impl RawTopology for dyn State {
+impl<'a> RawTopology for dyn State + 'a {
     fn neighbours(&self, coord: Coord, center_type: CoordType, neighbour_type: CoordType) -> TopologyResult {
         let mut results = Coord::TOPOLOGY.neighbours(coord, center_type, neighbour_type)?;
         Ok(results.iter()
@@ -11,7 +11,7 @@ impl RawTopology for dyn State {
     }
 }
 
-impl Topology for dyn State {
+impl<'a> Topology for dyn State + 'a {
     fn hex_hex_neighbours(&self, coord: Coord) -> TopologyResult {
         self.neighbours(coord, CoordType::Hex, CoordType::Hex)
     }

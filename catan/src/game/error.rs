@@ -1,15 +1,15 @@
 use super::action::Action;
-use crate::state::Error as StateError;
+use crate::board::Error as BoardError;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Error {
     IncoherentAction(Action),
     IllegalAction(Action),
-    ImpossibleAction(StateError),
+    ImpossibleAction(BoardError),
 }
 
-impl From<StateError> for Error {
-    fn from(state_error: StateError) -> Self {
-        Error::ImpossibleAction(state_error)
+impl From<BoardError> for Error {
+    fn from(board_error: BoardError) -> Self {
+        Error::ImpossibleAction(board_error)
     }
 }

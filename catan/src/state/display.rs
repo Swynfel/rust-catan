@@ -41,7 +41,7 @@ fn water(f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
     write!(f, "  ~~~  ")
 }
 
-impl Display for dyn State {
+impl<'a> Display for dyn State + 'a {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let w = self.get_layout().width as usize;
         for i in 0..self.get_layout().size {

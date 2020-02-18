@@ -1,5 +1,5 @@
 use std::io::{Write, Error};
-use termion::cursor;
+use termion::{cursor, color};
 
 use catan::state::State;
 use catan::board::{Coord, DetailedCoordType};
@@ -19,7 +19,7 @@ impl Pattern {
     pub fn new(lines: Vec<&'static str>) -> Self {
         Pattern {
             half_height: (lines.len() / 2) as u16,
-            half_widths: lines.iter().map(|line| line.len() as u16 / 2 - 1).collect(),
+            half_widths: lines.iter().map(|line| line.len() as u16 / 2).collect(),
             lines: lines,
         }
     }
@@ -66,6 +66,9 @@ pub fn grid_display<T : GridDisplayable>(displayable: &T, f: &mut dyn Write, sta
             _ => (),
         };
     };
-    write!(f, "{}", cursor::Goto(1, state.get_layout().height as u16 * STEP_HEIGHT + STEP_HEIGHT_BUFFER))?;
+    write!(f, "{}{}{}",
+           color::Fg(color::Reset),
+           color::Bg(color::Reset),
+           cursor::Goto(1, state.get_layout().height as u16 * STEP_HEIGHT + STEP_HEIGHT_BUFFER))?;
     Ok(())
 }

@@ -1,14 +1,14 @@
 
 use crate::board::map::TricellMap;
-use crate::board::Layout;
+use crate::board::{Layout, Error};
 use crate::utils::{Empty, Hex, Harbor, Coord};
 use super::PlayerHand;
-use super::{State, StateMaker, Error, Player};
+use super::{State, StateMaker, PlayerId};
 
 pub struct TricellState<'a> {
     layout: &'a Layout,
     static_board: Box<TricellMap<Hex,Empty,Harbor>>,
-    dynamic_board: Box<TricellMap<Empty,Player,(Player,bool)>>,
+    dynamic_board: Box<TricellMap<Empty,PlayerId,(PlayerId,bool)>>,
     thief: Coord,
     dvp_card: u8,
     players: Vec<PlayerHand>,
@@ -44,6 +44,10 @@ impl State for TricellState<'_> {
         self.players.len() as u8
     }
 
+    fn get_player_hand(&self, player: PlayerId) -> PlayerHand {
+        self.players[player as usize]
+    }
+    
     /*** static ***/
     fn set_static_hex(&mut self, coord: Coord, hex: Hex) -> Result<(), Error>{
         Ok(self.static_board.set_hex(coord, hex)?)
@@ -62,11 +66,11 @@ impl State for TricellState<'_> {
     }
 
     /*** dynamic ***/
-    fn set_dynamic_path(&mut self, coord: Coord, player: Player) -> Result<(), Error>{
+    fn set_dynamic_path(&mut self, coord: Coord, player: PlayerId) -> Result<(), Error>{
         Ok(self.dynamic_board.set_path(coord, player)?)
     }
 
-    fn get_dynamic_path(&self, coord: Coord) -> Result<Option<Player>, Error>{
+    fn get_dynamic_path(&self, coord: Coord) -> Result<Option<PlayerId>, Error>{
         let player = self.dynamic_board.get_path(coord)?;
         if player < self.player_count() {
             Ok(Some(player))
@@ -75,11 +79,11 @@ impl State for TricellState<'_> {
         }
     }
 
-    fn set_dynamic_intersection(&mut self, coord: Coord, player: Player, is_city: bool) -> Result<(), Error>{
+    fn set_dynamic_intersection(&mut self, coord: Coord, player: PlayerId, is_city: bool) -> Result<(), Error>{
         Ok(self.dynamic_board.set_intersection(coord, (player, is_city))?)
     }
 
-    fn get_dynamic_intersection(&self, coord: Coord) -> Result<Option<(Player, bool)>, Error>{
+    fn get_dynamic_intersection(&self, coord: Coord) -> Result<Option<(PlayerId, bool)>, Error>{
         let (player, is_city) = self.dynamic_board.get_intersection(coord)?;
         if player < self.player_count() {
             Ok(Some((player, is_city)))

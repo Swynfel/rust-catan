@@ -11,11 +11,11 @@ use catan::game::{play, Phase};
 use terminal_player::TerminalPlayer;
 
 fn main() {
-    println!("It's working?...");
+    println!("[START]");
     let mut state = board::setup::random_default::<TricellState>(1);
 
     let mut player = TerminalPlayer::new();
-    play::play_until_finished(&mut Phase::Turn(0,false,false), &mut *state, &mut player);
+    play::play_until_finished(&mut Phase::START_GAME, &mut *state, &mut player);
 
-    println!("Nope...");
+    println!("[END]");
 }
