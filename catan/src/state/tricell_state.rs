@@ -36,7 +36,6 @@ impl StateMaker for TricellState<'_> {
 }
 
 impl State for TricellState<'_> {
-
     fn get_layout(&self) -> &Layout {
         self.layout
     }

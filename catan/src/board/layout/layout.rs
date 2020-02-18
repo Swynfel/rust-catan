@@ -1,6 +1,7 @@
 use super::{Coord, Error};
 
 pub struct Layout {
+    ray: u8,
     pub half_width: u8,
     pub half_height: u8,
     pub width: u8,
@@ -10,10 +11,13 @@ pub struct Layout {
 }
 
 impl Layout {
-    pub fn new(half_width: u8, half_height: u8, hexes: Vec<Coord>) -> Layout {
+    pub fn new(ray: u8, hexes: Vec<Coord>) -> Layout {
+        let half_height = 2*ray + 1;
+        let half_width = 2*half_height;
         let width = 2*half_width+1;
         let height = 2*half_height+1;
         Layout {
+            ray,
             half_width,
             half_height,
             width,
@@ -53,5 +57,11 @@ impl Layout {
             let y = (flat / self.width as usize) as i8 - self.half_height as i8;
             Ok(Coord::new(x,y))
         }
+    }
+
+    pub fn contains_coord(&self, coord: Coord) -> bool {
+        let x = coord.x.abs() as u8;
+        let y = coord.y.abs() as u8;
+        (y <= self.half_height) && (x + y <= self.half_width + 1)
     }
 }

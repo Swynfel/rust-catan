@@ -52,7 +52,7 @@ impl<T: Clone> OptionLayerMap<T> {
     fn get_flat_id_or_fail(&self, coord: Coord) -> Result<usize, Error> {
         let flat_id = Layout::static_flat_index(coord, self.layout_half_width, self.layout_half_height, self.layout_width)?;
         if self.coords != CoordType::Void && self.coords != coord.get_type() {
-            return Err(Error::WrongCoordType(self.coords, coord.get_type()));
+            return Err(Error::WrongCoordType { expected: self.coords, received: coord.get_type() });
         }
         Ok(flat_id)
     }

@@ -1,11 +1,13 @@
+use crate::board::utils::topology::TopologyResult;
+use crate::board::utils::topology::{Topology, RawTopology};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rand::Rng;
 
 use super::c;
 use crate::state::{State, StateMaker};
-use crate::board::layout;
-use crate::board::utils::{Coord, CoordTransform};
+use crate::board::{layout, Error};
+use crate::board::utils::{Coord, CoordType, CoordTransform};
 use crate::utils::{Hex, LandHex, Resource, Harbor};
 
 const LAND_TILES_COUNT: usize = 19;
@@ -42,8 +44,8 @@ const PORT_PATHS: [Coord; PORT_COUNT] = [
     c(-2,-8), c(-5,-5), c(-5, 1), c(-3, 7)
 ];
 
-pub fn random_default_setup<T : State + StateMaker>() -> Box<dyn State> {
-    let mut state = T::new_empty(&layout::DEFAULT, 2);
+pub fn random_default_setup<T : StateMaker>(player_count: u8) -> Box<dyn State> {
+    let mut state = T::new_empty(&layout::DEFAULT, player_count);
     // BoardState
     let mut rng = thread_rng();
     // hexes
@@ -76,7 +78,7 @@ pub fn random_default_setup<T : State + StateMaker>() -> Box<dyn State> {
         .map(|&coord| transform.transform(coord))
         .zip(porttiles.iter());
     for (path_coord, &porttile) in coord_porttile_pairs {
-        for intersection_coord in path_coord.path_intersection().expect("Wrong path").iter() {
+        for intersection_coord in (*state).path_intersection_neighbours(path_coord).expect("Wrong path").iter() {
             state.set_static_harbor(*intersection_coord, porttile)
             .expect("Failed setting harbor");
         }

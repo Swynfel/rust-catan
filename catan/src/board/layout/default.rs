@@ -10,9 +10,7 @@ fn default_layout() -> Layout {
                   c( 4, -4), c( 4, 0), c( 4, 4),
     ];
 
-    Layout::new(10, 5,
-        hexes
-    )
+    Layout::new(2, hexes)
 }
 
 pub static DEFAULT: Lazy<Layout> = Lazy::new(||

@@ -30,7 +30,7 @@ impl<H: Copy, P: Copy, I: Copy> TricellMap<H,P,I> {
 
     fn assert_type(coord: Coord, coord_type: CoordType) -> Result<(),Error> {
         if coord_type != coord.get_type() {
-            Err(Error::WrongCoordType(coord_type, coord.get_type()))
+            Err(Error::WrongCoordType{ expected: coord_type, received: coord.get_type() })
         } else {
             Ok(())
         }

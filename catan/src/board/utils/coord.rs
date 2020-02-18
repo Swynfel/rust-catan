@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::board::error::Error;
+use super::topology::CoordTopology;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Type {
@@ -65,6 +66,7 @@ impl fmt::Debug for Coord {
 
 impl Coord {
     pub const ZERO: Coord = Coord::new(0, 0);
+    pub const TOPOLOGY: CoordTopology = CoordTopology;
 
     pub const fn new(x: i8, y: i8) -> Coord {
         Coord{
@@ -101,14 +103,6 @@ impl Coord {
             (2,0) | (1,1) | (3,1) => Type::Path,
             (0,1) | (2,1) => Type::Intersection,
             _ => Type::Void,
-        }
-    }
-
-    pub fn path_intersection(&self) -> Result<[Coord; 2], Error> {
-        match self.get_hash() {
-            (2,0) => Ok([Coord::new(self.x, self.y - 1), Coord::new(self.x, self.y + 1)]),
-            (1,1) | (3,1) => Ok([Coord::new(self.x - 1, self.y), Coord::new(self.x + 1, self.y)]),
-            _ => Err(Error::InvalidCoord(*self)),
         }
     }
 }

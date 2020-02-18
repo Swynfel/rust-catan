@@ -6,5 +6,12 @@ pub enum Error {
     NotSetup(Coord),
     InvalidCoord(Coord),
     OutOfBoard,
-    WrongCoordType(CoordType, CoordType),
+    WrongCoordType {
+        expected: CoordType,
+        received: CoordType
+    },
+    InvalidNeighbourTypes {
+        center: CoordType,
+        neighbours: CoordType
+    },
 }

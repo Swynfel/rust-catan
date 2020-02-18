@@ -1,34 +1,38 @@
 use crate::state::State;
-use super::{Action, Error};
+use super::{Action, Error, Phase};
 use crate::player::Player;
 
-pub enum Phase {
-    InitialPlacement(u8,bool,bool), // (player,placing_second,placing_road)
-    Turn(u8,bool,bool), //(player,dice_rolled,dvp_card_played)
-    FinishedGame(u8), //(winning_player)
-}
-
-pub fn play_until_finished(phase: &mut Phase, state: &mut State, player: &mut dyn Player) {
-    let mut counter = 0;
+pub fn play_until_finished(phase: &mut Phase, state: &mut dyn State, player: &mut dyn Player) {
     loop {
-        counter += 1;
-        let action = player.action_picker(phase, state);
-        apply(phase, state, action).ok();
-        if let Phase::FinishedGame(_) = phase {
+        // If new turn, roll dice automatically
+        if let Phase::Turn(_, false, _) = phase {
+            apply(phase, state, Action::RollDice).expect("Couldn't automatically roll dice");
+        }
+        // If the game is finished, exit
+        else if let Phase::FinishedGame(_) = phase {
             break;
         }
-        if counter > 2 {
+
+        // Ask player to take action
+        let action = player.pick_action(phase, state);
+        if action == Action::Exit {
             break;
+        }
+        // Applies action
+        let result = apply(phase, state, action);
+        if let Err(error) = result {
+            // Tells player if action was invalid
+            player.bad_action(error);
         }
     }
 }
 
-fn apply(phase: &mut Phase, state: &mut State, action: Action) -> Result<(), Error> {
+fn apply(phase: &mut Phase, state: &mut dyn State, action: Action) -> Result<(), Error> {
     match phase {
         Phase::InitialPlacement(player, placing_second, placing_road) => {
             if *placing_road {
-                if let Action::BuildRoad(coord) = action {
-                    state.set_dynamic_path(coord, *player);
+                if let Action::BuildRoad { path } = action {
+                    state.set_dynamic_path(path, *player)?;
                     /*** Changin Phase ***/
                     *placing_road = false;
                     // If first placement
@@ -55,9 +59,9 @@ fn apply(phase: &mut Phase, state: &mut State, action: Action) -> Result<(), Err
                     Err(Error::IncoherentAction(action))
                 }
             } else {
-                if let Action::BuildSettlement(coord) = action {
-                    if let Ok(value) = state.get_dynamic_intersection(coord) {
-                        state.set_dynamic_intersection(coord, *player, false);
+                if let Action::BuildSettlement { intersection } = action {
+                    if let Ok(value) = state.get_dynamic_intersection(intersection) {
+                        state.set_dynamic_intersection(intersection, *player, false)?;
                     } else {
                         return Err(Error::IncoherentAction(action))
                     };
@@ -79,11 +83,20 @@ fn apply(phase: &mut Phase, state: &mut State, action: Action) -> Result<(), Err
                     Err(Error::IncoherentAction(action))
                 }
             }
-            Action::BuildRoad(coord) => unimplemented!(),
-            Action::BuildSettlement(coord) => unimplemented!(),
-            Action::BuildCity(coord) => unimplemented!(),
+            Action::RollDice => {
+                if *dice_rolled {
+                    Err(Error::IncoherentAction(action))
+                } else {
+                    /*** Changin Phase ***/
+                    *dice_rolled = true;
+                    Ok(())
+                }
+            }
+            Action::BuildRoad { path } => unimplemented!(),
+            Action::BuildSettlement { intersection } => unimplemented!(),
+            Action::BuildCity { intersection } => unimplemented!(),
 
-            Action::TradeBank(resource_from, resource_to) => unimplemented!(),
+            Action::TradeBank { given, asked } => unimplemented!(),
 
             Action::BuyDvp => unimplemented!(),
             _ => unimplemented!(),
@@ -91,9 +104,3 @@ fn apply(phase: &mut Phase, state: &mut State, action: Action) -> Result<(), Err
         _ => unimplemented!(),
     }
 }
-
-/*
-pub fn legal(phase: &Phase, state: &State, action: &Action) -> bool {
-    true
-}
-*/

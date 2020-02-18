@@ -7,7 +7,7 @@ use catan::utils::Hex;
 use catan::board::Coord;
 
 use super::drawtype::{ToDrawType, player_color, player_letter};
-use super::utils::{GridDisplayable, Pattern, grid_display};
+use super::utils::{GridDisplayable, Pattern};
 
 static HEX_PATTERN: Lazy<Pattern> = Lazy::new(|| Pattern::new(vec![
        "@@@@@@@",
@@ -50,8 +50,10 @@ static ROAD_Z_PATTERN: Lazy<Pattern> = Lazy::new(|| Pattern::new(vec![
     "@@%"
 ]));
 
-struct PrettyGridDisplay;
-const PRETTY_GRID_DISPLAY: PrettyGridDisplay = PrettyGridDisplay;
+pub(crate) struct PrettyGridDisplay;
+impl PrettyGridDisplay {
+    pub const INSTANCE: PrettyGridDisplay = PrettyGridDisplay;
+}
 
 impl GridDisplayable for PrettyGridDisplay {
     fn display_hex(&self, x: u16, y: u16, f: &mut dyn Write, coord: Coord, state: &dyn State) ->  Result<(), Error>{
@@ -120,8 +122,4 @@ impl GridDisplayable for PrettyGridDisplay {
         }
         Ok(())
     }
-}
-
-pub fn pretty_terminal<W: Write>(f: &mut W, state: &dyn State) -> Result<(),Error> {
-    grid_display(&PRETTY_GRID_DISPLAY, f, state)
 }

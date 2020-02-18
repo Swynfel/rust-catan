@@ -5,15 +5,24 @@ use crate::utils::{Coord, Resource, Resources};
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Action {
     EndTurn,
-    //RollDice,
+    RollDice,
     //Discard(Resources),
     //MoveThied(Coord, Player),
 
-    BuildRoad(Coord),
-    BuildSettlement(Coord),
-    BuildCity(Coord),
+    BuildRoad {
+        path: Coord
+    },
+    BuildSettlement {
+        intersection: Coord
+    },
+    BuildCity {
+        intersection: Coord
+    },
 
-    TradeBank(Resource, Resource),
+    TradeBank {
+        given: Resource,
+        asked: Resource
+    },
     //TradePlayer(Resources, Vec<bool>),
     //TradePlayerAccept,
     //TradePlayerAlternative(Resources),
@@ -23,4 +32,6 @@ pub enum Action {
     //DvpSoldier(Coord, Player),
     //DvpMonopole(Resource),
     //DvpProgress(Coord,Option<Coord>),
+
+    Exit,
 }

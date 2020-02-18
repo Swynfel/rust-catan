@@ -1,10 +1,7 @@
 use std::io::{Write, Error};
-use once_cell::sync::Lazy;
-use termion::{color, cursor, style};
+use termion::cursor;
 
-use super::drawtype::ToDrawType;
 use catan::state::State;
-use catan::utils::Hex;
 use catan::board::{Coord, DetailedCoordType};
 
 const STEP_WIDTH: u16 = 4;
@@ -63,6 +60,9 @@ pub fn grid_display<T : GridDisplayable>(displayable: &T, f: &mut dyn Write, sta
             DetailedCoordType::OHex => displayable.display_hex(x, y, f, coord, state)?,
             DetailedCoordType::VIntersection => displayable.display_intersection(x, y, f, coord, false, state)?,
             DetailedCoordType::AIntersection => displayable.display_intersection(x, y, f, coord, true, state)?,
+            DetailedCoordType::ZPath => displayable.display_path(x, y, f, coord, false, false, state)?,
+            DetailedCoordType::SPath => displayable.display_path(x, y, f, coord, false, true, state)?,
+            DetailedCoordType::IPath => displayable.display_path(x, y, f, coord, true, false, state)?,
             _ => (),
         };
     };

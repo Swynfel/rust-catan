@@ -3,6 +3,7 @@ mod display;
 mod player_hand;
 mod separated_state;
 mod tricell_state;
+pub mod topology;
 
 pub use player_hand::PlayerHand;
 pub use separated_state::SeparatedState;
@@ -13,7 +14,7 @@ pub type Player = u8;
 use crate::utils::{Hex, Harbor, Coord};
 use crate::board::layout::Layout;
 
-pub trait StateMaker {
+pub trait StateMaker : State {
     fn new_empty<'a>(layout: &'a Layout, player_count: u8) -> Box<dyn State + 'a>;
 }
 

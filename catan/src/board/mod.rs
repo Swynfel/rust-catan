@@ -1,5 +1,5 @@
 mod error;
-mod utils;
+pub mod utils;
 pub mod map;
 pub mod layout;
 pub mod setup;
