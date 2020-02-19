@@ -30,7 +30,7 @@ fn c(x: i8, y: i8) -> Coord {
 impl RawTopology for CoordTopology {
     fn neighbours(&self, coord :Coord, center_type: CoordType, neighbour_type: CoordType) -> TopologyResult {
         if coord.get_type() != center_type {
-            return Err(Error::WrongCoordTypeSingle (center_type,  coord.get_type()));
+            return Err(Error::WrongCoordType { expected: center_type,  received: coord.get_type() });
         }
         let x = coord.x;
         let y = coord.y;

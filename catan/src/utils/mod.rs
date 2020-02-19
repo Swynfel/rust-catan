@@ -40,3 +40,17 @@ impl Hex {
         }
     }
 }
+
+impl Harbor {
+    pub const COUNT: usize = 6;
+
+    pub fn to_usize(self) -> usize {
+        match self {
+            Harbor::None => 6,
+            Harbor::Generic => 5,
+            Harbor::Special(res) => {
+                res as usize
+            }
+        }
+    }
+}

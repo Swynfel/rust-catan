@@ -1,6 +1,5 @@
 mod layout;
 mod default;
-mod utils;
 
 pub use layout::Layout;
 pub use default::DEFAULT;

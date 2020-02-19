@@ -7,22 +7,15 @@ pub enum Error {
     InvalidCoord(Coord),
     OutOfBoard,
     WrongCoordType {
+        expected: CoordType,
+        received: CoordType,
+    },
+    MultiWrongCoordType {
         expected: [bool; 4],
-        received: CoordType
+        received: CoordType,
     },
     InvalidNeighbourTypes {
         center: CoordType,
         neighbours: CoordType
     },
-}
-
-impl Error {
-    pub fn WrongCoordTypeSingle(expected: CoordType, received: CoordType) -> Error {
-        let mut expected_array = [false; 4];
-        expected_array[expected as usize] = true;
-        Error::WrongCoordType {
-            expected: expected_array,
-            received,
-        }
-    }
 }

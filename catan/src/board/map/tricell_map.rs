@@ -1,4 +1,3 @@
-use super::BoardMap;
 use crate::utils::CoordType;
 use crate::board::{Coord, Layout, Error};
 
@@ -30,7 +29,7 @@ impl<H: Copy, P: Copy, I: Copy> TricellMap<H,P,I> {
 
     fn assert_type(coord: Coord, coord_type: CoordType) -> Result<(),Error> {
         if coord_type != coord.get_type() {
-            Err(Error::WrongCoordTypeSingle(coord_type,coord.get_type()))
+            Err(Error::WrongCoordType { expected: coord_type,  received: coord.get_type() })
         } else {
             Ok(())
         }

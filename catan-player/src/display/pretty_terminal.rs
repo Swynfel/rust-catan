@@ -1,6 +1,6 @@
 use std::io::{Write, Error};
 use once_cell::sync::Lazy;
-use termion::{color, cursor, style};
+use termion::{cursor, style};
 
 use catan::state::State;
 use catan::utils::Hex;

@@ -1,4 +1,3 @@
-use super::BoardMap;
 use crate::utils::CoordType;
 use crate::board::{Coord, Layout, Error};
 
@@ -10,8 +9,8 @@ pub struct OptionLayerMap<T> {
     layout_width: isize,
 }
 
-impl<T: Clone> BoardMap<T> for OptionLayerMap<T> {
-    fn get_value(&self, coord: Coord) -> Result<&T, Error> {
+impl<T: Clone> OptionLayerMap<T> {
+    pub fn get_value(&self, coord: Coord) -> Result<&T, Error> {
         let flat_id = self.get_flat_id_or_fail(coord)?;
         match &self.map[flat_id] {
             Some(value) => Ok(value),
@@ -19,7 +18,7 @@ impl<T: Clone> BoardMap<T> for OptionLayerMap<T> {
         }
     }
 
-    fn get_mut(&mut self, coord: Coord) -> Result<&mut T, Error> {
+    pub fn get_mut(&mut self, coord: Coord) -> Result<&mut T, Error> {
         let flat_id = self.get_flat_id_or_fail(coord)?;
         match &mut self.map[flat_id] {
             Some(value) => Ok(value),
@@ -27,14 +26,16 @@ impl<T: Clone> BoardMap<T> for OptionLayerMap<T> {
         }
     }
 
-    fn set_value(&mut self, coord: Coord, value: T) -> Result<(), Error> {
+    pub fn set_value(&mut self, coord: Coord, value: T) -> Result<(), Error> {
         let flat_id = self.get_flat_id_or_fail(coord)?;
         self.map[flat_id] = Some(value);
         Ok(())
     }
-}
 
-impl<T: Clone> OptionLayerMap<T> {
+    pub fn boxed(self) -> Box<Self> where Self: std::marker::Sized  {
+        Box::new(self)
+    }
+
     pub fn new(layout: &Layout) -> Box<OptionLayerMap<T>> {
         OptionLayerMap::<T>::new_typed(layout, CoordType::Void).boxed()
     }
@@ -52,7 +53,7 @@ impl<T: Clone> OptionLayerMap<T> {
     fn get_flat_id_or_fail(&self, coord: Coord) -> Result<usize, Error> {
         let flat_id = Layout::static_flat_index(coord, self.layout_half_width, self.layout_half_height, self.layout_width)?;
         if self.coords != CoordType::Void && self.coords != coord.get_type() {
-            return Err(Error::WrongCoordTypeSingle( self.coords, coord.get_type() ));
+            return Err(Error::WrongCoordType { expected: self.coords,  received: coord.get_type() });
         }
         Ok(flat_id)
     }

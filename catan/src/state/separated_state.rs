@@ -1,5 +1,5 @@
 
-use crate::board::map::{OptionLayerMap, BoardMap};
+use crate::board::map::OptionLayerMap;
 use crate::board::Layout;
 use crate::utils::{Hex, Harbor, Coord, CoordType};
 use super::PlayerHand;
@@ -10,8 +10,8 @@ pub struct SeparatedState<'a> {
     thief: Coord,
     hexes: OptionLayerMap<Hex>,
     harbors: OptionLayerMap<Harbor>,
-    intersections: OptionLayerMap<Option<(u8, bool)>>,
-    paths: OptionLayerMap<Option<u8>>,
+    intersections: OptionLayerMap<Option<(PlayerId, bool)>>,
+    paths: OptionLayerMap<PlayerId>,
     dvp_card: u8,
     players: Vec<PlayerHand>,
 }
@@ -47,11 +47,36 @@ impl State for SeparatedState<'_> {
         self.players.len() as u8
     }
 
-    fn get_player_hand(&self, player: PlayerId) -> PlayerHand {
-        self.players[player as usize]
+    fn get_dvp_card_left(&self) -> u8 {
+        self.dvp_card
     }
 
-    /*** static ***/
+    fn get_thief_hex(&self) -> Coord {
+        self.thief
+    }
+
+    fn set_thief_hex(&mut self, coord: Coord) {
+        self.thief = coord
+    }
+
+
+    fn get_player_hand(&self, player: PlayerId) -> &PlayerHand {
+        &self.players[player.to_u8() as usize]
+    }
+
+    fn get_player_hand_mut(&mut self, player: PlayerId) -> &mut PlayerHand {
+        &mut self.players[player.to_u8() as usize]
+    }
+
+    fn get_longest_road(&self) -> Option<(PlayerId, u8)> {
+        None
+    }
+
+    fn get_largest_army(&self) -> Option<(PlayerId, u8)> {
+        None
+    }
+
+
     fn set_static_hex(&mut self, coord: Coord, hex: Hex) -> Result<(), Error>{
         Ok(self.hexes.set_value(coord, hex)?)
     }
@@ -68,13 +93,13 @@ impl State for SeparatedState<'_> {
         Ok(*self.harbors.get_value(coord)?)
     }
 
-    /*** dynamic ***/
+
     fn set_dynamic_path(&mut self, coord: Coord, player: PlayerId) -> Result<(), Error>{
-        Ok(self.paths.set_value(coord, Some(player))?)
+        Ok(self.paths.set_value(coord, player)?)
     }
 
     fn get_dynamic_path(&self, coord: Coord) -> Result<Option<PlayerId>, Error>{
-        Ok(*self.paths.get_value(coord)?)
+        Ok(self.paths.get_value(coord)?.option())
     }
 
     fn set_dynamic_intersection(&mut self, coord: Coord, player: PlayerId, is_city: bool) -> Result<(), Error>{

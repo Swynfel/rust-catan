@@ -1,13 +1,12 @@
-use crate::board::utils::topology::TopologyResult;
-use crate::board::utils::topology::{Topology, RawTopology};
+use crate::board::utils::topology::Topology;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rand::Rng;
 
 use super::c;
 use crate::state::{State, StateMaker};
-use crate::board::{layout, Error};
-use crate::board::utils::{Coord, CoordType, CoordTransform};
+use crate::board::layout;
+use crate::board::utils::{Coord, CoordTransform};
 use crate::utils::{Hex, LandHex, Resource, Harbor};
 
 const LAND_TILES_COUNT: usize = 19;
@@ -85,22 +84,3 @@ pub fn random_default_setup<T : StateMaker>(player_count: u8) -> Box<dyn State> 
     };
     state
 }
-
-/*
-impl BoardState<'_> {
-    pub fn randomly_fill(&mut self, setup: &Setup) {
-        let mut landtiles = setup.landtiles;
-        landtiles.shuffle(&mut thread_rng());
-        let mut i: usize = 0;
-        for (coord, landtile) in DEFAULT_NUM_PATH.iter().zip(landtiles.iter()) {
-            self.hexes.set_value(*coord, match landtile {
-                Some(res) => {
-                    let num_token = DEFAULT_NUM_TOKENS[i];
-                    i += 1;
-                    Hex::Land(LandHex::Prod(*res, num_token))
-                }
-                None => Hex::Land(LandHex::Desert)
-            }).expect("Failed setting hexes");
-        }
-    }
-}*/

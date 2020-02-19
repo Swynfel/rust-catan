@@ -1,6 +1,6 @@
 use std::fmt::{self, Display};
+use std::ops::{Add, Sub, AddAssign, SubAssign, Index, IndexMut};
 use std::cmp::Ordering;
-use std::ops::Add;
 use std::convert::TryFrom;
 
 /******* Resource *******/
@@ -82,6 +82,16 @@ impl Resources {
         }
     }
 
+    pub fn new_one(resource: Resource, quantity: i8) -> Self {
+        match resource {
+            Resource::Brick => Resources::new(quantity, 0, 0, 0, 0),
+            Resource::Lumber => Resources::new(0, quantity, 0, 0, 0),
+            Resource::Ore => Resources::new(0, 0, quantity, 0, 0),
+            Resource::Grain => Resources::new(0, 0, 0, quantity, 0),
+            Resource::Wool => Resources::new(0, 0, 0, 0, quantity),
+        }
+    }
+
     fn cmp(&self, other: &Resources) -> [Ordering; Resource::COUNT] {[
         self.brick.cmp(&other.brick),
         self.lumber.cmp(&other.lumber),
@@ -106,6 +116,66 @@ impl Add for Resources {
             self.grain + other.grain,
             self.wool + other.wool,
         )
+    }
+}
+
+impl Sub for Resources {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Resources::new(
+            self.brick - other.brick,
+            self.lumber - other.lumber,
+            self.ore - other.ore,
+            self.grain - other.grain,
+            self.wool - other.wool,
+        )
+    }
+}
+
+impl AddAssign for Resources {
+    fn add_assign(&mut self, other: Self) {
+        self.brick += other.brick;
+        self.lumber += other.lumber;
+        self.ore += other.ore;
+        self.grain += other.grain;
+        self.wool += other.wool;
+    }
+}
+
+impl SubAssign for Resources {
+    fn sub_assign(&mut self, other: Self) {
+        self.brick -= other.brick;
+        self.lumber -= other.lumber;
+        self.ore -= other.ore;
+        self.grain -= other.grain;
+        self.wool -= other.wool;
+    }
+}
+
+impl Index<Resource> for Resources {
+    type Output = i8;
+
+    fn index(&self, resource: Resource) -> &i8 {
+        match resource {
+            Resource::Brick => &self.brick,
+            Resource::Lumber => &self.lumber,
+            Resource::Ore => &self.ore,
+            Resource::Grain => &self.grain,
+            Resource::Wool => &self.wool,
+        }
+    }
+}
+
+impl IndexMut<Resource> for Resources {
+    fn index_mut(&mut self, resource: Resource) -> &mut i8 {
+        match resource {
+            Resource::Brick => &mut self.brick,
+            Resource::Lumber => &mut self.lumber,
+            Resource::Ore => &mut self.ore,
+            Resource::Grain => &mut self.grain,
+            Resource::Wool => &mut self.wool,
+        }
     }
 }
 

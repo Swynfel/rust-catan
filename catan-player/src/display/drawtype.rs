@@ -125,7 +125,7 @@ impl ToDrawType for Resource {
 }
 
 pub fn player_bg_color(player: PlayerId) -> AnsiValue {
-    match player {
+    match player.to_u8() {
         0 => AnsiValue::rgb(5, 1, 1),
         1 => AnsiValue::rgb(1, 1, 5),
         2 => AnsiValue::rgb(5, 5, 5),
@@ -135,7 +135,7 @@ pub fn player_bg_color(player: PlayerId) -> AnsiValue {
 }
 
 pub fn player_letter(player: PlayerId) -> char {
-    match player {
+    match player.to_u8() {
         0 => 'r',
         1 => 'b',
         2 => 'w',

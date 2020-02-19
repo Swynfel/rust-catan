@@ -1,10 +1,10 @@
 use super::State;
 use crate::board::utils::topology::{Topology, RawTopology, TopologyResult};
-use crate::board::{Coord, CoordType, Error};
+use crate::board::{Coord, CoordType};
 
 impl<'a> RawTopology for dyn State + 'a {
     fn neighbours(&self, coord: Coord, center_type: CoordType, neighbour_type: CoordType) -> TopologyResult {
-        let mut results = Coord::TOPOLOGY.neighbours(coord, center_type, neighbour_type)?;
+        let results = Coord::TOPOLOGY.neighbours(coord, center_type, neighbour_type)?;
         Ok(results.iter()
             .filter_map(|coord| if self.get_layout().contains_coord(*coord) { Some(*coord) } else { None })
             .collect())

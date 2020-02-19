@@ -1,7 +1,6 @@
 use super::{Coord, Error};
 
 pub struct Layout {
-    ray: u8,
     pub half_width: u8,
     pub half_height: u8,
     pub width: u8,
@@ -17,7 +16,6 @@ impl Layout {
         let width = 2*half_width+1;
         let height = 2*half_height+1;
         Layout {
-            ray,
             half_width,
             half_height,
             width,
