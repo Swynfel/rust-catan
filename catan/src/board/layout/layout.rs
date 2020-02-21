@@ -7,10 +7,12 @@ pub struct Layout {
     pub height: u8,
     pub size: usize,
     pub hexes: Vec<Coord>,
+    pub paths: Vec<Coord>,
+    pub intersections: Vec<Coord>,
 }
 
 impl Layout {
-    pub fn new(ray: u8, hexes: Vec<Coord>) -> Layout {
+    pub fn new(ray: u8, hexes: Vec<Coord>, paths: Vec<Coord>, intersections: Vec<Coord>) -> Layout {
         let half_height = 2*ray + 1;
         let half_width = 2*half_height;
         let width = 2*half_width+1;
@@ -21,7 +23,9 @@ impl Layout {
             width,
             height,
             size: (width as usize)*(height as usize),
-            hexes
+            hexes,
+            paths,
+            intersections,
         }
     }
 

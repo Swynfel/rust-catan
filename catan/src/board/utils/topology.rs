@@ -61,7 +61,6 @@ impl RawTopology for CoordTopology {
     }
 }
 
-/*
 impl<T : RawTopology> Topology for T {
     fn hex_hex_neighbours(&self, coord: Coord) -> TopologyResult {
         self.neighbours(coord, CoordType::Hex, CoordType::Hex)
@@ -92,4 +91,4 @@ impl<T : RawTopology> Topology for T {
     fn intersection_intersection_neighbours(&self, coord: Coord) -> TopologyResult {
         self.neighbours(coord, CoordType::Intersection, CoordType::Intersection)
     }
-}*/
+}

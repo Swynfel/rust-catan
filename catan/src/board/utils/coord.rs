@@ -1,6 +1,5 @@
 use std::fmt;
 
-use crate::board::error::Error;
 use super::topology::CoordTopology;
 
 #[derive(Copy, Clone, PartialEq, Debug)]

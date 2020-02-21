@@ -66,10 +66,10 @@ impl GridDisplayable for PrettyGridDisplay {
 
         write!(f, "{}", clr)?;
 
-        HEX_PATTERN.display(x-1, y, f, &letter)?;
+        HEX_PATTERN.display(x, y, f, &letter)?;
 
         if value.is_some() {
-            write!(f, "{}{}{:>2}{}", cursor::Goto(x, y), style::Bold, value.unwrap(), style::Reset)?;
+            write!(f, "{}{}{:>2}{}", cursor::Goto(x - 1, y), style::Bold, value.unwrap(), style::Reset)?;
         }
         Ok(())
     }

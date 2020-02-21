@@ -4,6 +4,7 @@ use crate::utils::{Resource, Resources};
 
 #[derive(Copy, Clone, Debug)]
 pub enum Error {
+    ActionNotUnderstood,
     IncoherentAction(Action),
     IllegalAction(Action),
     ImpossibleAction(BoardError),

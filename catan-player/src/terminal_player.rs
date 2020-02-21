@@ -1,10 +1,11 @@
+use std::collections::VecDeque;
 use std::io::{stdout, Stdout, stdin, Write};
 use termion::clear;
 //use termion::screen::AlternateScreen;
 
 use catan::state::State;
+use catan::game::{Action, Error, Phase, Notification};
 use catan::player::Player;
-use catan::game::{Action, Error, Phase};
 
 use crate::display::{utils::grid_display, PrettyGridDisplay};
 use super::action_parser::{parse_action, parse_help};
@@ -12,6 +13,7 @@ use super::action_parser::{parse_action, parse_help};
 pub struct TerminalPlayer {
     screen: Stdout,
     bad_action: Option<Error>,
+    notifications: VecDeque<Notification>,
 }
 
 impl TerminalPlayer {
@@ -20,12 +22,13 @@ impl TerminalPlayer {
         TerminalPlayer {
             screen,
             bad_action: None,
+            notifications: VecDeque::new(),
         }
     }
 }
 
 impl Player for TerminalPlayer {
-    fn new_game(&mut self) {
+    fn new_game(&mut self, _position: u8, _: &dyn State) {
         write!(self.screen, "{clear}", clear = clear::All).unwrap();
         writeln!(self.screen, "[New game]").unwrap();
         self.screen.flush().unwrap();
@@ -38,6 +41,9 @@ impl Player for TerminalPlayer {
         writeln!(self.screen, "{:?}", phase).unwrap();
         loop {
             // Displays previous error
+            for notification in self.notifications.iter() {
+                writeln!(self.screen, "{:?}", notification).expect("Failed to write notification");
+            }
             if let Some(error) = self.bad_action {
                 writeln!(self.screen, "[ERROR] {:?}", error).expect("Failed to write error");
             }
@@ -62,5 +68,12 @@ impl Player for TerminalPlayer {
 
     fn bad_action(&mut self, error: Error) {
         self.bad_action = Some(error);
+    }
+
+    fn notify(&mut self, notification: Notification) {
+        self.notifications.push_back(notification);
+        while self.notifications.len() > 8 {
+            self.notifications.pop_front();
+        }
     }
 }

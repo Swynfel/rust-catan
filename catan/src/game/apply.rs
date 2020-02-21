@@ -1,50 +1,14 @@
 use crate::state::{State, PlayerId};
-use crate::player::Player;
 use crate::utils::Resources;
 
-use super::{Action, Phase};
-use super::legal;
-
-pub fn play_until_finished(phase: &mut Phase, state: &mut dyn State, player: &mut dyn Player) {
-    player.new_game();
-    loop {
-        // If new turn, roll dice automatically
-        if let Phase::Turn(_, false, _) = phase {
-            apply(phase, state, Action::RollDice);
-        }
-        // If the game is finished, exit
-        else if let Phase::FinishedGame(_) = phase {
-            break;
-        }
-
-        let mut action;
-        loop {
-            // Ask player to take action
-            action = player.pick_action(phase, state);
-            if action == Action::Exit {
-                return;
-            }
-
-            // Checks if action is legal
-            let result = legal::legal(phase, state, action);
-            if let Err(error) = result {
-                // Tells player if action was invalid
-                player.bad_action(error);
-            } else {
-                break;
-            }
-        }
-        //Applies action
-        apply(phase, state, action);
-    }
-}
+use super::{Action, Phase, Notification};
 
 /// Applies a legal action
 ///
 /// Modifies a state by applying a given action, and/or changes the phase.action.
 /// The function assumes that the action is legal and that it can be applied without problem.
 /// It is necessary to call [legal](crate::game::legal::legal) beforehand to check if the action can indeed be applied without problem
-fn apply(phase: &mut Phase, state: &mut dyn State, action: Action) {
+pub(super) fn apply(phase: &mut Phase, state: &mut dyn State, action: Action) -> Option<Notification> {
     static ERROR_MESSAGE: &'static str = "Apply function failed because action supplied was illegal";
     let player = phase.player();
     match action {
@@ -80,7 +44,7 @@ fn apply(phase: &mut Phase, state: &mut dyn State, action: Action) {
         //
         Action::BuildSettlement { intersection } => {
             state.set_dynamic_intersection(intersection, player, false).expect(ERROR_MESSAGE);
-            let mut hand = state.get_player_hand_mut(player);
+            let hand = state.get_player_hand_mut(player);
             hand.settlement_pieces -= 1;
             hand.building_vp += 1;
             if phase.is_turn() {
@@ -90,14 +54,18 @@ fn apply(phase: &mut Phase, state: &mut dyn State, action: Action) {
         }
         Action::BuildCity { intersection } => {
             state.set_dynamic_intersection(intersection, player, true).expect(ERROR_MESSAGE);
-            let mut hand = state.get_player_hand_mut(player);
+            let hand = state.get_player_hand_mut(player);
             hand.resources -= Resources::CITY;
             hand.settlement_pieces += 1;
             hand.city_pieces -= 1;
             hand.building_vp += 1;
         }
 
-        Action::TradeBank { given, asked } => unimplemented!(),
+        Action::TradeBank { given, asked } => {
+            let hand = state.get_player_hand_mut(player);
+            hand.resources[given] -= hand.harbor.rate(given) as i8;
+            hand.resources[asked] += 1;
+        }
 
         Action::BuyDvp => unimplemented!(),
         _ => unimplemented!(),
@@ -130,6 +98,7 @@ fn apply(phase: &mut Phase, state: &mut dyn State, action: Action) {
             }
         }
     }
+    None
 }
 
 /*
