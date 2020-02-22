@@ -1,7 +1,7 @@
 mod picker_player;
 mod randomy;
 
-pub use picker_player::{ActionPickerPlayer, IndexPickerPlayer, ActionPickerPlayerTrait, IndexPickerPlayerTrait};
+pub use picker_player::{ActionPickerPlayer, IndexPickerPlayer, PickerPlayerTrait};
 pub use randomy::Randomy;
 
 use crate::state::State;

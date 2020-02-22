@@ -35,3 +35,34 @@ pub enum Action {
 
     Exit,
 }
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum ActionCategory {
+    EndTurn = 0,
+    RollDice = 1,
+    BuildRoad = 2,
+    BuildSettlement = 3,
+    BuildCity = 4,
+    TradeBank = 5,
+    BuyDvp = 6,
+    Exit = 7,
+}
+
+impl Action {
+    pub fn category(&self) -> ActionCategory {
+        match self {
+            Action::EndTurn => ActionCategory::EndTurn,
+            Action::RollDice => ActionCategory::RollDice,
+            Action::BuildRoad { path: _ } => ActionCategory::BuildRoad,
+            Action::BuildSettlement { intersection: _ } => ActionCategory::BuildSettlement,
+            Action::BuildCity { intersection: _ } => ActionCategory::BuildCity,
+            Action::TradeBank { given: _, asked: _ } => ActionCategory::TradeBank,
+            Action::BuyDvp => ActionCategory::BuyDvp,
+            Action::Exit => ActionCategory::Exit,
+        }
+    }
+}
+
+impl ActionCategory {
+    pub const COUNT: usize = 8;
+}

@@ -6,7 +6,7 @@ mod apply;
 pub mod legal;
 
 pub use error::Error;
-pub use action::Action;
+pub use action::{Action, ActionCategory};
 pub use phase::Phase;
 pub use notification::Notification;
 
