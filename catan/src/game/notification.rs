@@ -10,7 +10,7 @@ pub enum Notification {
     },
     ResourcesRolled {
         roll: u8,
-        resources: Vec<(PlayerId, Resources)>,
+        resources: Vec<Resources>,
     },
     GameFinished {
         winner: PlayerId,

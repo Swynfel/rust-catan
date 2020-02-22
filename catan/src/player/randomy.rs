@@ -20,7 +20,7 @@ impl ActionPickerPlayerTrait for Randomy {
         println!("{:?}", error);
     }
 
-    fn notify(&mut self, _: Notification) {}
+    fn notify(&mut self, _: &Notification) {}
 }
 
 impl Randomy {

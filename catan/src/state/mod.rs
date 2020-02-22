@@ -22,6 +22,10 @@ impl PlayerId {
         self.0
     }
 
+    pub fn to_usize(&self) -> usize {
+        self.to_u8() as usize
+    }
+
     pub fn option(self) -> Option<Self> {
         if self == PlayerId::NONE {
             None

@@ -1,7 +1,7 @@
 use crate::board::utils::topology::Topology;
+use rand::{Rng, thread_rng};
 use rand::seq::SliceRandom;
-use rand::thread_rng;
-use rand::Rng;
+use rand::rngs::ThreadRng;
 
 use super::c;
 use crate::state::{State, StateMaker};
@@ -43,14 +43,17 @@ const PORT_PATHS: [Coord; PORT_COUNT] = [
     c(-2,-8), c(-5,-5), c(-5, 1), c(-3, 7)
 ];
 
-pub fn random_default_setup<T : StateMaker>(player_count: u8) -> Box<dyn State> {
+pub fn random_default_setup_simple<T : StateMaker>(player_count: u8) -> Box<dyn State> {
+    random_default_setup::<T, ThreadRng>(&mut thread_rng(), player_count)
+}
+
+pub fn random_default_setup<T : StateMaker, R : Rng>(rng: &mut R, player_count: u8) -> Box<dyn State> {
     let mut state = T::new_empty(&layout::DEFAULT, player_count);
     // BoardState
-    let mut rng = thread_rng();
     // hexes
     let mut landtiles = LAND_TILES;
-    landtiles.shuffle(&mut rng);
-    let transform = CoordTransform::random(Coord::ZERO, &mut rng);
+    landtiles.shuffle(rng);
+    let transform = CoordTransform::random(Coord::ZERO, rng);
     let coord_landtile_pairs = NUM_TRACK.iter()
         .map(|&coord| transform.transform(coord))
         .zip(landtiles.iter());
@@ -67,7 +70,7 @@ pub fn random_default_setup<T : StateMaker>(player_count: u8) -> Box<dyn State> 
     }
     // ports
     let mut porttiles = PORT_TILES;
-    porttiles.shuffle(&mut rng);
+    porttiles.shuffle(rng);
     let transform = CoordTransform::new(
         Coord::ZERO,
         if rng.gen() {0} else {3},
@@ -77,7 +80,7 @@ pub fn random_default_setup<T : StateMaker>(player_count: u8) -> Box<dyn State> 
         .map(|&coord| transform.transform(coord))
         .zip(porttiles.iter());
     for (path_coord, &porttile) in coord_porttile_pairs {
-        for intersection_coord in (*state).path_intersection_neighbours(path_coord).expect("Wrong path").iter() {
+        for intersection_coord in state.path_intersection_neighbours(path_coord).expect("Wrong path").iter() {
             state.set_static_harbor(*intersection_coord, porttile)
             .expect("Failed setting harbor");
         }

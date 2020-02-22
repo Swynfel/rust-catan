@@ -1,5 +1,8 @@
+use rand::Rng;
+
 use crate::state::{State, PlayerId};
-use crate::utils::Resources;
+use crate::utils::{Resources, Hex, LandHex};
+use crate::board::utils::topology::Topology;
 
 use super::{Action, Phase, Notification};
 
@@ -8,7 +11,7 @@ use super::{Action, Phase, Notification};
 /// Modifies a state by applying a given action, and/or changes the phase.action.
 /// The function assumes that the action is legal and that it can be applied without problem.
 /// It is necessary to call [legal](crate::game::legal::legal) beforehand to check if the action can indeed be applied without problem
-pub(super) fn apply(phase: &mut Phase, state: &mut dyn State, action: Action) -> Option<Notification> {
+pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut dyn State, action: Action, rng: &mut R) -> Option<Notification> {
     static ERROR_MESSAGE: &'static str = "Apply function failed because action supplied was illegal";
     let player = phase.player();
     match action {
@@ -22,10 +25,40 @@ pub(super) fn apply(phase: &mut Phase, state: &mut dyn State, action: Action) ->
         // ## Rolling Dice (Should be done automatically for now)
         //
         Action::RollDice => {
-            // TODO: Roll dice and give resources
-            // TODO: Handle thief
-            if let Phase::Turn(_, dice_rolled, _) = phase {
-                *dice_rolled = true;
+            let roll = rng.gen_range(1, 7) + rng.gen_range(1, 7);
+            if roll == 7 {
+                // TODO: Handle thief
+                if let Phase::Turn(_, dice_rolled, _) = phase {
+                    *dice_rolled = true;
+                }
+                return Some(Notification::ThiefRolled);
+            } else {
+                let mut received_resources = vec![Resources::ZERO; state.player_count() as usize];
+                // For each hex...
+                for hex in state.get_layout().hexes.iter() {
+                    // ...that produces resources...
+                    if let Hex::Land(LandHex::Prod(res, num_token)) = state.get_static_hex(*hex).expect("Failed to inspect hex") {
+                        // ..and has the correct number token
+                        if num_token == roll {
+                            // Look at every neighbour intersection...
+                            for intersection in state.hex_intersection_neighbours(*hex).expect("Failed to inspect intersection") {
+                                // ...with a settlement or city...
+                                if let Some((player, is_city)) = state.get_dynamic_intersection(intersection).expect("Failed to inspect intersection") {
+                                    // ...and add the resources to the corresponding player
+                                    received_resources[player.to_usize()][res] += if is_city {2} else {1};
+                                }
+                            }
+                        }
+                    }
+                }
+                // Then give the resources to the players
+                for (i,resources) in received_resources.iter().enumerate() {
+                    state.get_player_hand_mut(PlayerId::from(i as u8)).resources += *resources;
+                }
+                if let Phase::Turn(_, dice_rolled, _) = phase {
+                    *dice_rolled = true;
+                }
+                return Some(Notification::ResourcesRolled { roll, resources: received_resources });
             }
         }
         //
@@ -49,6 +82,13 @@ pub(super) fn apply(phase: &mut Phase, state: &mut dyn State, action: Action) ->
             hand.building_vp += 1;
             if phase.is_turn() {
                 hand.resources -= Resources::SETTLEMENT;
+            } else if *phase == Phase::InitialPlacement(player, true, false) {
+                // Gives surrounding resources when placing the second settlement of the initial phase
+                for hex in state.intersection_hex_neighbours(intersection).expect(ERROR_MESSAGE) {
+                    if let Hex::Land(LandHex::Prod(res, _)) = state.get_static_hex(hex).expect(ERROR_MESSAGE) {
+                        state.get_player_hand_mut(player).resources[res] += 1;
+                    }
+                }
             }
             // TODO : Recompute longest road if road broken
         }

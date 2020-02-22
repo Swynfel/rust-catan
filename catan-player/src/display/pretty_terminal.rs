@@ -1,9 +1,9 @@
 use std::io::{Write, Error};
 use once_cell::sync::Lazy;
-use termion::{cursor, style};
+use termion::{cursor, style, color};
 
-use catan::state::State;
-use catan::utils::Hex;
+use catan::state::{State, PlayerId, PlayerHand};
+use catan::utils::{Resource, Hex};
 use catan::board::Coord;
 
 use super::drawtype::{ToDrawType, DrawType, player_color, player_letter};
@@ -120,4 +120,29 @@ impl GridDisplayable for PrettyGridDisplay {
         }
         Ok(())
     }
+}
+
+const FULL_LINE: &str = "                     ";
+
+pub fn pretty_player_hand(f: &mut dyn Write, player: PlayerId, hand: &PlayerHand) ->  Result<(), Error> {
+    let player_color = player_color(player);
+    write!(f, "{}{}", player_color, FULL_LINE)?;
+    write!(f, "{}{} ", cursor::Down(1), cursor::Left(21))?;
+    for resource in Resource::ALL.iter() {
+        let resource_draw_type = resource.to_draw_type();
+        write!(f, "{resource_color}{resource_letter}{resource_amount:>2}{player_color} ",
+            resource_color = resource_draw_type.color(),
+            resource_letter = resource_draw_type.letter(),
+            resource_amount = hand.resources[*resource],
+            player_color = player_color,
+        )?;
+    }
+    write!(f, "{}{}{}{}{}",
+        cursor::Down(1),
+        cursor::Left(21),
+        FULL_LINE,
+        color::Fg(color::Reset),
+        color::Bg(color::Reset)
+    )?;
+    Ok(())
 }

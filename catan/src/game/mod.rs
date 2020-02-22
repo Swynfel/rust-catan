@@ -12,8 +12,9 @@ pub use notification::Notification;
 
 // --------------------------------------------------------------------------------------------- //
 
+use rand::{Rng, SeedableRng};
+use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
-use rand::thread_rng;
 
 use crate::state::TricellState;
 use crate::board::setup;
@@ -36,11 +37,18 @@ impl Game {
         self.players.push(player);
     }
 
+    fn notify_all(&mut self, notification: Notification) {
+        for player in self.players.iter_mut() {
+            player.notify(&notification);
+        }
+    }
+
     pub fn play(&mut self) {
         let player_count = self.players.len();
-        let mut state = setup::random_default::<TricellState>(player_count as u8);
+        let mut rng = SmallRng::from_entropy();
+        let mut state = setup::random_default::<TricellState, SmallRng>(&mut rng, player_count as u8);
         let mut players_order: Vec<usize> = (0..player_count).collect();
-        players_order.shuffle(&mut thread_rng());
+        players_order.shuffle(&mut rng);
 
         let mut phase = Phase::START_GAME;
 
@@ -50,13 +58,13 @@ impl Game {
         loop {
             // If new turn, roll dice automatically
             if let Phase::Turn(_, false, _) = phase {
-                apply(&mut phase, &mut *state, Action::RollDice);
+                if let Some(notification) = apply(&mut phase, &mut *state, Action::RollDice, &mut rng) {
+                    self.notify_all(notification);
+                }
             }
             // If the game is finished, exit
             else if let Phase::FinishedGame(winner) = phase {
-                for player in players_order.iter() {
-                    self.players[*player].notify(Notification::GameFinished { winner });
-                }
+                self.notify_all(Notification::GameFinished { winner });
                 break;
             }
 
@@ -81,11 +89,9 @@ impl Game {
             }
 
             // Notifies every player of action played
-            for player in players_order.iter() {
-                self.players[*player].notify(Notification::ActionPlayed { by: phase.player(), action });
-            }
+            self.notify_all(Notification::ActionPlayed { by: phase.player(), action });
             // Applies action
-            apply(&mut phase, &mut *state, action);
+            apply(&mut phase, &mut *state, action, &mut rng);
         }
     }
 }

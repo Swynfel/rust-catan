@@ -3,11 +3,12 @@ use std::io::{stdout, Stdout, stdin, Write};
 use termion::clear;
 //use termion::screen::AlternateScreen;
 
-use catan::state::State;
+use catan::state::{State, PlayerId};
 use catan::game::{Action, Error, Phase, Notification};
 use catan::player::Player;
 
-use crate::display::{utils::grid_display, PrettyGridDisplay};
+use crate::display::utils::grid_display;
+use crate::display::{PrettyGridDisplay, pretty_player_hand};
 use super::action_parser::{parse_action, parse_help};
 
 pub struct TerminalPlayer {
@@ -38,6 +39,12 @@ impl Player for TerminalPlayer {
         // Displays state
         write!(self.screen, "{clear}", clear = clear::All).expect("Failed to clear screen");
         grid_display(&PrettyGridDisplay::INSTANCE, &mut self.screen, state).expect("Failed to draw grid");
+        for i in 0..state.player_count() {
+            let player = PlayerId::from(i);
+            let hand = state.get_player_hand(player);
+            pretty_player_hand(&mut self.screen, player, hand).expect("Failed to draw player hand");
+            writeln!(&mut self.screen).expect("Failed to return line");
+        }
         writeln!(self.screen, "{:?}", phase).unwrap();
         loop {
             // Displays previous error
@@ -70,8 +77,8 @@ impl Player for TerminalPlayer {
         self.bad_action = Some(error);
     }
 
-    fn notify(&mut self, notification: Notification) {
-        self.notifications.push_back(notification);
+    fn notify(&mut self, notification: &Notification) {
+        self.notifications.push_back(notification.clone());
         while self.notifications.len() > 8 {
             self.notifications.pop_front();
         }

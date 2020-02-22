@@ -7,14 +7,14 @@ pub trait ActionPickerPlayerTrait {
     fn new_game(&mut self, position: u8, state: &dyn State, possible_actions: &Vec<Action>);
     fn pick_action(&mut self, phase: &Phase, state: &dyn State, legal_actions: &Vec<Action>) -> Action;
     fn bad_action(&mut self, error: Error);
-    fn notify(&mut self, notification: Notification);
+    fn notify(&mut self, notification: &Notification);
 }
 
 pub trait IndexPickerPlayerTrait {
     fn new_game(&mut self, position: u8, state: &dyn State, possible_actions: &Vec<Action>);
     fn pick_action_index(&mut self, phase: &Phase, state: &dyn State, legal_actions: &Vec<bool>) -> u8;
     fn bad_action(&mut self, error: Error);
-    fn notify(&mut self, notification: Notification);
+    fn notify(&mut self, notification: &Notification);
 }
 
 pub struct ActionPickerPlayer<T : ActionPickerPlayerTrait> {
@@ -141,7 +141,7 @@ impl<T: ActionPickerPlayerTrait> Player for ActionPickerPlayer<T> {
     fn bad_action(&mut self, error: Error) {
         self.player.bad_action(error);
     }
-    fn notify(&mut self, notification: Notification) {
+    fn notify(&mut self, notification: &Notification) {
         self.player.notify(notification);
     }
 }
@@ -164,7 +164,7 @@ impl<T: IndexPickerPlayerTrait> Player for IndexPickerPlayer<T> {
     fn bad_action(&mut self, error: Error) {
         self.player.bad_action(error);
     }
-    fn notify(&mut self, notification: Notification) {
+    fn notify(&mut self, notification: &Notification) {
         self.player.notify(notification);
     }
 }

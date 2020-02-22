@@ -11,5 +11,5 @@ pub trait Player {
     fn new_game(&mut self, position: u8, state: &dyn State);
     fn pick_action(&mut self, phase: &Phase, state: &dyn State) -> Action;
     fn bad_action(&mut self, error: Error);
-    fn notify(&mut self, notification: Notification);
+    fn notify(&mut self, notification: &Notification);
 }
