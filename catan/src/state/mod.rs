@@ -1,17 +1,15 @@
 mod display;
 mod player_hand;
-mod separated_state;
 mod tricell_state;
 pub mod topology;
 
 pub use player_hand::PlayerHand;
-pub use separated_state::SeparatedState;
 pub use tricell_state::TricellState;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct PlayerId(u8);
 
-use crate::utils::{Hex, Harbor, Coord};
+use crate::utils::{Hex, Harbor, Coord, DevelopmentCards};
 use crate::board::{Layout, Error};
 
 impl PlayerId {
@@ -51,7 +49,9 @@ pub trait State {
 
     fn player_count(&self) -> u8;
 
-    fn get_dvp_card_left(&self) -> u8;
+    fn get_development_cards(&self) -> DevelopmentCards;
+
+    fn get_development_cards_mut(&mut self) -> &mut DevelopmentCards;
 
     fn get_thief_hex(&self) -> Coord;
 
@@ -78,7 +78,7 @@ pub trait State {
     }
 
     fn get_player_total_vp(&self, player: PlayerId) -> u8 {
-        self.get_player_public_vp(player) + self.get_player_hand(player).dvp_cards.victory_point
+        self.get_player_public_vp(player) + self.get_player_hand(player).development_cards.victory_point
     }
 
     fn get_longest_road(&self) -> Option<(PlayerId, u8)>;

@@ -1,5 +1,7 @@
+mod development_card;
 mod resource;
 
+pub use development_card::{DevelopmentCard, DevelopmentCards};
 pub use resource::{Resource, Resources};
 pub use crate::board::{Coord, CoordType};
 

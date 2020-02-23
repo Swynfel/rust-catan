@@ -58,8 +58,8 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> ActionPicker
                 }
             }
         }
-        // BuyDvp
-        self.possible_actions.push(Action::BuyDvp);
+        // BuyDevelopment
+        self.possible_actions.push(Action::BuyDevelopment);
         self.action_length = self.possible_actions.len();
     }
 
@@ -109,8 +109,8 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> IndexPickerPlayer<
                 }
             }
         }
-        // BuyDvp
-        self.possible_actions.push(Action::BuyDvp);
+        // BuyDevelopment
+        self.possible_actions.push(Action::BuyDevelopment);
         self.action_length = self.possible_actions.len();
     }
 

@@ -28,10 +28,10 @@ pub enum Action {
     //TradePlayerAlternative(Resources),
     //TradePlayerDecline,
 
-    BuyDvp,
-    //DvpSoldier(Coord, Player),
-    //DvpMonopole(Resource),
-    //DvpProgress(Coord,Option<Coord>),
+    BuyDevelopment,
+    //DevelopmentSoldier(Coord, Player),
+    //DevelopmentMonopole(Resource),
+    //DevelopmentProgress(Coord,Option<Coord>),
 
     Exit,
 }
@@ -44,7 +44,7 @@ pub enum ActionCategory {
     BuildSettlement = 3,
     BuildCity = 4,
     TradeBank = 5,
-    BuyDvp = 6,
+    BuyDevelopment = 6,
     Exit = 7,
 }
 
@@ -57,7 +57,7 @@ impl Action {
             Action::BuildSettlement { intersection: _ } => ActionCategory::BuildSettlement,
             Action::BuildCity { intersection: _ } => ActionCategory::BuildCity,
             Action::TradeBank { given: _, asked: _ } => ActionCategory::TradeBank,
-            Action::BuyDvp => ActionCategory::BuyDvp,
+            Action::BuyDevelopment => ActionCategory::BuyDevelopment,
             Action::Exit => ActionCategory::Exit,
         }
     }

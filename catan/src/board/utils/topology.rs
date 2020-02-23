@@ -54,7 +54,7 @@ impl RawTopology for CoordTopology {
             (DetailedCoordType::AIntersection, CoordType::Path) => vec![c(x+1,y), c(x,y+1), c(x-1,y)],
             (DetailedCoordType::VIntersection, CoordType::Path) => vec![c(x+1,y), c(x-1,y), c(x,y-1)],
             (DetailedCoordType::AIntersection, CoordType::Intersection) => vec![c(x+2,y), c(x,y+2), c(x-2,y)],
-            (DetailedCoordType::VIntersection, CoordType::Intersection) => vec![c(x,y+2), c(x-2,y), c(x-2,y)],
+            (DetailedCoordType::VIntersection, CoordType::Intersection) => vec![c(x+2,y), c(x-2,y), c(x,y-2)],
 
             _ => return Err(Error::InvalidNeighbourTypes { center:center_type , neighbours:neighbour_type }),
         })

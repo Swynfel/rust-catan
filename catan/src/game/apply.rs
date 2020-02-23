@@ -1,7 +1,7 @@
 use rand::Rng;
 
 use crate::state::{State, PlayerId};
-use crate::utils::{Resources, Hex, LandHex};
+use crate::utils::{Resources, Hex, LandHex, DevelopmentCard};
 use crate::board::utils::topology::Topology;
 
 use super::{Action, Phase, Notification};
@@ -77,9 +77,11 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut dyn State, action: A
         //
         Action::BuildSettlement { intersection } => {
             state.set_dynamic_intersection(intersection, player, false).expect(ERROR_MESSAGE);
+            let harbor = state.get_static_harbor(intersection).expect(ERROR_MESSAGE);
             let hand = state.get_player_hand_mut(player);
             hand.settlement_pieces -= 1;
             hand.building_vp += 1;
+            hand.harbor.add(harbor);
             if phase.is_turn() {
                 hand.resources -= Resources::SETTLEMENT;
             } else if *phase == Phase::InitialPlacement(player, true, false) {
@@ -107,10 +109,23 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut dyn State, action: A
             hand.resources[asked] += 1;
         }
 
-        Action::BuyDvp => unimplemented!(),
+        Action::BuyDevelopment => {
+            state.get_player_hand_mut(player).resources -= Resources::DVP_CARD;
+            let development = state.get_development_cards_mut();
+            let mut picked = rng.gen_range(0, development.total());
+            for dvp in DevelopmentCard::ALL.iter() {
+                if picked < development[*dvp] {
+                    // this development card was picked
+                    development[*dvp] -= 1;
+                    state.get_player_hand_mut(player).development_cards[*dvp] += 1;
+                    break;
+                } else {
+                    picked -= development[*dvp];
+                }
+            }
+        }
         _ => unimplemented!(),
     }
-    // TODO: Check if player just won
     // Special phase change if initial placement
     if let Phase::InitialPlacement(player, placing_second, placing_road) = phase {
         if !*placing_road {
@@ -137,6 +152,9 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut dyn State, action: A
                 }
             }
         }
+    // Check if player just won
+    } else if state.get_player_total_vp(player) >= 10 {
+        *phase = Phase::FinishedGame(player);
     }
     None
 }
@@ -296,7 +314,7 @@ fn apply(phase: &mut Phase, state: &mut dyn State, action: Action) -> Result<(),
 
             Action::TradeBank { given, asked } => unimplemented!(),
 
-            Action::BuyDvp => unimplemented!(),
+            Action::BuyDevelopment => unimplemented!(),
             _ => unimplemented!(),
         }
         _ => panic!("Game already finished"),

@@ -1,6 +1,6 @@
 use crate::board::map::TricellMap;
 use crate::board::{Layout, Error};
-use crate::utils::{Empty, Hex, Harbor, Coord};
+use crate::utils::{Empty, Hex, Harbor, Coord, DevelopmentCards};
 use super::PlayerHand;
 use super::{State, StateMaker, PlayerId};
 
@@ -9,7 +9,7 @@ pub struct TricellState<'a> {
     static_board: Box<TricellMap<Hex,Empty,Harbor>>,
     dynamic_board: Box<TricellMap<Empty,PlayerId,(PlayerId,bool)>>,
     thief: Coord,
-    dvp_card: u8,
+    development_card: DevelopmentCards,
     longest_road: PlayerId,
     largest_army: PlayerId,
     players: Vec<PlayerHand>,
@@ -22,7 +22,7 @@ impl TricellState<'_> {
             static_board: TricellMap::new(layout, Hex::Water, Empty::INSTANCE, Harbor::None),
             dynamic_board: TricellMap::new(layout, Empty::INSTANCE, PlayerId::NONE, (PlayerId::NONE, false)),
             thief: Coord::ZERO,
-            dvp_card: 25,
+            development_card: DevelopmentCards::new(),
             longest_road: PlayerId::NONE,
             largest_army: PlayerId::NONE,
             players: vec![PlayerHand::new();players],
@@ -45,8 +45,12 @@ impl State for TricellState<'_> {
         self.players.len() as u8
     }
 
-    fn get_dvp_card_left(&self) -> u8 {
-        self.dvp_card
+    fn get_development_cards(&self) -> DevelopmentCards {
+        self.development_card
+    }
+
+    fn get_development_cards_mut(&mut self) -> &mut DevelopmentCards {
+        &mut self.development_card
     }
 
     fn get_thief_hex(&self) -> Coord {

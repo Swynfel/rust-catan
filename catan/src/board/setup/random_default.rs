@@ -7,7 +7,7 @@ use super::c;
 use crate::state::{State, StateMaker};
 use crate::board::layout;
 use crate::board::utils::{Coord, CoordTransform};
-use crate::utils::{Hex, LandHex, Resource, Harbor};
+use crate::utils::{Hex, LandHex, Resource, Harbor, DevelopmentCards};
 
 const LAND_TILES_COUNT: usize = 19;
 
@@ -43,13 +43,21 @@ const PORT_PATHS: [Coord; PORT_COUNT] = [
     c(-2,-8), c(-5,-5), c(-5, 1), c(-3, 7)
 ];
 
+const DVP_CARDS: DevelopmentCards =
+    DevelopmentCards {
+        knight: 14,
+        road_building: 2,
+        year_of_plenty: 2,
+        monopole: 2,
+        victory_point: 5,
+    };
+
 pub fn random_default_setup_simple<T : StateMaker>(player_count: u8) -> Box<dyn State> {
     random_default_setup::<T, ThreadRng>(&mut thread_rng(), player_count)
 }
 
 pub fn random_default_setup<T : StateMaker, R : Rng>(rng: &mut R, player_count: u8) -> Box<dyn State> {
     let mut state = T::new_empty(&layout::DEFAULT, player_count);
-    // BoardState
     // hexes
     let mut landtiles = LAND_TILES;
     landtiles.shuffle(rng);
@@ -85,5 +93,7 @@ pub fn random_default_setup<T : StateMaker, R : Rng>(rng: &mut R, player_count: 
             .expect("Failed setting harbor");
         }
     };
+    // development cards
+    *state.get_development_cards_mut() = DVP_CARDS;
     state
 }

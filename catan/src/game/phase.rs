@@ -3,7 +3,7 @@ use crate::state::PlayerId;
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Phase {
     InitialPlacement(PlayerId,bool,bool), // (player,placing_second,placing_road)
-    Turn(PlayerId,bool,bool), //(player,dice_rolled,dvp_card_played)
+    Turn(PlayerId,bool,bool), //(player,dice_rolled,development_card_played)
     FinishedGame(PlayerId), //(winning_player)
 }
 

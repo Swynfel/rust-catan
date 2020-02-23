@@ -1,4 +1,4 @@
-use crate::utils::{Coord, CoordType, Resources, Harbor};
+use crate::utils::{Coord, CoordType, Resources};
 use crate::state::{State, PlayerId};
 use crate::game::{Phase, Action, Error};
 use crate::board::utils::topology::Topology;
@@ -182,8 +182,8 @@ pub fn legal(phase: &Phase, state: &dyn State, action: Action) -> Result<(), Err
                 }
             }
 
-            Action::BuyDvp => {
-                if state.get_dvp_card_left() >= 1
+            Action::BuyDevelopment => {
+                if state.get_development_cards().total() >= 1
                     && state.get_player_hand(*player).resources >= Resources::DVP_CARD {
                         Ok(())
                 } else {

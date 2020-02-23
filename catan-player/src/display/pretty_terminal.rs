@@ -3,7 +3,7 @@ use once_cell::sync::Lazy;
 use termion::{cursor, style, color};
 
 use catan::state::{State, PlayerId, PlayerHand};
-use catan::utils::{Resource, Hex};
+use catan::utils::{Resource, Hex, DevelopmentCard};
 use catan::board::Coord;
 
 use super::drawtype::{ToDrawType, DrawType, player_color, player_letter};
@@ -122,12 +122,13 @@ impl GridDisplayable for PrettyGridDisplay {
     }
 }
 
-const FULL_LINE: &str = "                     ";
+const FULL_LINE: &str = "                                ";
+const WIDTH: u16 = 32;
 
 pub fn pretty_player_hand(f: &mut dyn Write, player: PlayerId, hand: &PlayerHand) ->  Result<(), Error> {
     let player_color = player_color(player);
     write!(f, "{}{}", player_color, FULL_LINE)?;
-    write!(f, "{}{} ", cursor::Down(1), cursor::Left(21))?;
+    write!(f, "{}{} ", cursor::Down(1), cursor::Left(WIDTH))?;
     for resource in Resource::ALL.iter() {
         let resource_draw_type = resource.to_draw_type();
         write!(f, "{resource_color}{resource_letter}{resource_amount:>2}{player_color} ",
@@ -137,9 +138,18 @@ pub fn pretty_player_hand(f: &mut dyn Write, player: PlayerId, hand: &PlayerHand
             player_color = player_color,
         )?;
     }
+    write!(f, " ")?;
+    let dvp_color = DrawType::GenericHarbor.color();
+    for development_card in DevelopmentCard::ALL.iter() {
+        write!(f, "{dvp_color}{dvp_amount:>1}{player_color} ",
+            dvp_color = dvp_color,
+            dvp_amount = hand.development_cards[*development_card],
+            player_color = player_color,
+        )?;
+    }
     write!(f, "{}{}{}{}{}",
         cursor::Down(1),
-        cursor::Left(21),
+        cursor::Left(WIDTH),
         FULL_LINE,
         color::Fg(color::Reset),
         color::Bg(color::Reset)

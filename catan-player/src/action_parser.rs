@@ -51,6 +51,9 @@ pub fn parse_action(raw: String) -> Result<Action, ParsingError> {
             let intersection = end_parse_coord(splited.next().ok_or(ParsingError::NotEnoughtParameters)?)?;
             Ok(Action::BuildCity { intersection })
         }
+        Some("BuyDevelopmentCard") | Some("DevelopmentCard") | Some("Development") | Some("D") => {
+            Ok(Action::BuyDevelopment)
+        }
         Some("TradeBank") | Some("Trade") | Some("T") => {
             let given = end_parse_resource(splited.next().ok_or(ParsingError::NotEnoughtParameters)?)?;
             let asked = end_parse_resource(splited.next().ok_or(ParsingError::NotEnoughtParameters)?)?;
@@ -70,6 +73,7 @@ Resource: [B]rick [L]umber [O]re [G]rain [W]ool
 Coord: <x>,<y>
 Action: [E]ndTurn
         Build[R]oad <Coord> / Build[S]ettlement <Coord> / Build[C]ity <Coord>
+        Buy[D]evelopmentCard
         [T]radeBank <Resource> <Resource>
         [Q]uit
 "}

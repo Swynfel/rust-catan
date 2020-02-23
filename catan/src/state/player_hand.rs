@@ -1,14 +1,5 @@
 use std::ops::{Index, IndexMut};
-use crate::utils::{Resource, Resources, Harbor};
-
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub struct DvpCardHand {
-    pub knigth: u8,
-    pub road_building: u8,
-    pub year_of_plenty: u8,
-    pub monopole: u8,
-    pub victory_point: u8,
-}
+use crate::utils::{Resource, Resources, Harbor, DevelopmentCards};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct AccessibleHarbor {
@@ -24,7 +15,7 @@ pub struct PlayerHand {
     pub building_vp: u8,
     pub knights: u8,
     pub continous_road: u8,
-    pub dvp_cards: DvpCardHand,
+    pub development_cards: DevelopmentCards,
     pub harbor: AccessibleHarbor,
 }
 
@@ -44,6 +35,14 @@ impl AccessibleHarbor {
         }
         required
     }
+
+    pub fn add(&mut self, harbor: Harbor) {
+        match harbor {
+            Harbor::None => return,
+            _ => (),
+        }
+        self[harbor] = true;
+    }
 }
 
 impl Index<Harbor> for AccessibleHarbor {
@@ -60,22 +59,6 @@ impl IndexMut<Harbor> for AccessibleHarbor {
     }
 }
 
-impl DvpCardHand {
-    pub fn new() -> DvpCardHand {
-        DvpCardHand {
-            knigth: 0,
-            road_building: 0,
-            year_of_plenty: 0,
-            monopole: 0,
-            victory_point: 0,
-        }
-    }
-
-    pub fn total(&self) -> u8 {
-        self.knigth + self.road_building + self.year_of_plenty + self.monopole + self.victory_point
-    }
-}
-
 impl PlayerHand {
     pub(super) fn new() -> PlayerHand {
         PlayerHand {
@@ -86,7 +69,7 @@ impl PlayerHand {
             building_vp: 0,
             knights: 0,
             continous_road: 0,
-            dvp_cards: DvpCardHand::new(),
+            development_cards: DevelopmentCards::new(),
             harbor: AccessibleHarbor::new(),
         }
     }
