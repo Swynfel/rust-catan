@@ -12,18 +12,19 @@ pub use notification::Notification;
 
 // --------------------------------------------------------------------------------------------- //
 
-use rand::{Rng, SeedableRng};
+use rand::SeedableRng;
 use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
 
 use crate::state::TricellState;
 use crate::board::setup;
-use crate::player::Player;
+use crate::state::PlayerId;
+use crate::player::CatanPlayer;
 
 use apply::apply;
 
 pub struct Game {
-    pub players: Vec<Box<dyn Player>>,
+    pub players: Vec<Box<dyn CatanPlayer>>,
 }
 
 impl Game {
@@ -33,7 +34,7 @@ impl Game {
         }
     }
 
-    pub fn add_player(&mut self, player: Box<dyn Player>) {
+    pub fn add_player(&mut self, player: Box<dyn CatanPlayer>) {
         self.players.push(player);
     }
 
@@ -43,7 +44,7 @@ impl Game {
         }
     }
 
-    pub fn play(&mut self) {
+    pub fn play(&mut self) -> Notification {
         let player_count = self.players.len();
         let mut rng = SmallRng::from_entropy();
         let mut state = setup::random_default::<TricellState, SmallRng>(&mut rng, player_count as u8);
@@ -53,19 +54,19 @@ impl Game {
         let mut phase = Phase::START_GAME;
 
         for (i, player) in players_order.iter().enumerate() {
-            self.players[*player].new_game(i as u8, &*state);
+            self.players[*player].new_game(i as u8, &state);
         }
         loop {
             // If new turn, roll dice automatically
             if let Phase::Turn(_, false, _) = phase {
-                if let Some(notification) = apply(&mut phase, &mut *state, Action::RollDice, &mut rng) {
+                if let Some(notification) = apply(&mut phase, &mut state, Action::RollDice, &mut rng) {
                     self.notify_all(notification);
                 }
             }
             // If the game is finished, exit
             else if let Phase::FinishedGame(winner) = phase {
                 self.notify_all(Notification::GameFinished { winner });
-                break;
+                return Notification::GameFinished { winner };
             }
 
             // Get the player object that is supposed to be making a decision
@@ -73,13 +74,13 @@ impl Game {
             let mut action;
             loop {
                 // Ask player to take action
-                action = player.pick_action(&phase, &*state);
+                action = player.pick_action(&phase, &state);
                 if action == Action::Exit {
-                    return;
+                    return Notification::GameFinished { winner: PlayerId::NONE };
                 }
 
                 // Checks if action is legal
-                let result = legal::legal(&phase, &*state, action);
+                let result = legal::legal(&phase, &state, action);
                 if let Err(error) = result {
                     // Tells player if action was invalid
                     player.bad_action(error);
@@ -91,7 +92,7 @@ impl Game {
             // Notifies every player of action played
             self.notify_all(Notification::ActionPlayed { by: phase.player(), action });
             // Applies action
-            apply(&mut phase, &mut *state, action, &mut rng);
+            apply(&mut phase, &mut state, action, &mut rng);
         }
     }
 }

@@ -3,7 +3,7 @@ use rand::rngs::SmallRng;
 
 use crate::game::{Phase, Action, Error, Notification};
 use crate::state::State;
-use super::{Player, ActionPickerPlayer, PickerPlayerTrait};
+use super::{CatanPlayer, ActionPickerPlayer, PickerPlayerTrait};
 
 pub struct Randomy {
     rng: SmallRng,
@@ -12,10 +12,10 @@ pub struct Randomy {
 impl PickerPlayerTrait for Randomy {
     type ACTIONS = Vec<Action>;
     type PICKED = Action;
-    
-    fn new_game(&mut self, _: u8, _: &dyn State, _: &Vec<Action>) {}
 
-    fn pick_action(&mut self, _: &Phase, _: &dyn State, legal_actions: &Vec<Action>) -> Action {
+    fn new_game(&mut self, _: u8, _: &State, _: &Vec<Action>) {}
+
+    fn pick_action(&mut self, _: &Phase, _: &State, legal_actions: &Vec<Action>) -> Action {
         legal_actions[self.rng.gen_range(0, legal_actions.len())]
     }
 
@@ -33,7 +33,7 @@ impl Randomy {
         }
     }
 
-    pub fn new_player() -> impl Player {
+    pub fn new_player() -> impl CatanPlayer {
         ActionPickerPlayer::new(Randomy::new())
     }
 }

@@ -1,4 +1,3 @@
-use crate::board::utils::topology::Topology;
 use rand::{Rng, thread_rng};
 use rand::seq::SliceRandom;
 use rand::rngs::ThreadRng;
@@ -7,6 +6,7 @@ use super::c;
 use crate::state::{State, StateMaker};
 use crate::board::layout;
 use crate::board::utils::{Coord, CoordTransform};
+use crate::board::utils::topology::Topology;
 use crate::utils::{Hex, LandHex, Resource, Harbor, DevelopmentCards};
 
 const LAND_TILES_COUNT: usize = 19;
@@ -52,11 +52,11 @@ const DVP_CARDS: DevelopmentCards =
         victory_point: 5,
     };
 
-pub fn random_default_setup_simple<T : StateMaker>(player_count: u8) -> Box<dyn State> {
+pub fn random_default_setup_simple<T : StateMaker>(player_count: u8) -> State {
     random_default_setup::<T, ThreadRng>(&mut thread_rng(), player_count)
 }
 
-pub fn random_default_setup<T : StateMaker, R : Rng>(rng: &mut R, player_count: u8) -> Box<dyn State> {
+pub fn random_default_setup<T : StateMaker, R : Rng>(rng: &mut R, player_count: u8) -> State {
     let mut state = T::new_empty(&layout::DEFAULT, player_count);
     // hexes
     let mut landtiles = LAND_TILES;

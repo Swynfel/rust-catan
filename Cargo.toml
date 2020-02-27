@@ -3,4 +3,5 @@
 members = [
     "catan",
     "catan-player",
+    "pycatan",
 ]

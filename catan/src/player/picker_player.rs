@@ -1,14 +1,14 @@
 use crate::state::State;
 use crate::game::{Action, ActionCategory, Notification, Error, Phase, legal};
 use crate::utils::Resource;
-use super::Player;
+use super::CatanPlayer;
 
 pub trait PickerPlayerTrait {
     type ACTIONS;
     type PICKED;
 
-    fn new_game(&mut self, position: u8, state: &dyn State, possible_actions: &Vec<Action>);
-    fn pick_action(&mut self, phase: &Phase, state: &dyn State, legal_actions: &Self::ACTIONS) -> Self::PICKED;
+    fn new_game(&mut self, position: u8, state: &State, possible_actions: &Vec<Action>);
+    fn pick_action(&mut self, phase: &Phase, state: &State, legal_actions: &Self::ACTIONS) -> Self::PICKED;
     fn bad_action(&mut self, error: Error);
     fn notify(&mut self, notification: &Notification);
 }
@@ -34,7 +34,7 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> ActionPicker
         }
     }
 
-    fn init_possible_actions(&mut self, state: &dyn State) {
+    fn init_possible_actions(&mut self, state: &State) {
         self.possible_actions.clear();
         // EndTurn
         self.possible_actions.push(Action::EndTurn);
@@ -63,7 +63,7 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> ActionPicker
         self.action_length = self.possible_actions.len();
     }
 
-    fn legal_actions(&mut self, phase: &Phase, state: &dyn State) -> Vec<Action> {
+    fn legal_actions(&mut self, phase: &Phase, state: &State) -> Vec<Action> {
         let mut legal_actions = Vec::new();
         for action in self.possible_actions.iter() {
             // TODO: More optimized
@@ -85,7 +85,7 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> IndexPickerPlayer<
         }
     }
 
-    fn init_possible_actions(&mut self, state: &dyn State) {
+    fn init_possible_actions(&mut self, state: &State) {
         self.possible_actions.clear();
         // EndTurn
         self.possible_actions.push(Action::EndTurn);
@@ -114,7 +114,7 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> IndexPickerPlayer<
         self.action_length = self.possible_actions.len();
     }
 
-    fn legal_actions(&mut self, phase: &Phase, state: &dyn State) -> Vec<bool> {
+    fn legal_actions(&mut self, phase: &Phase, state: &State) -> Vec<bool> {
         let mut legal_actions = Vec::new();
         for action in self.possible_actions.iter() {
             // TODO: More optimized
@@ -125,13 +125,13 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> IndexPickerPlayer<
     }
 }
 
-impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> Player for ActionPickerPlayer<T> {
-    fn new_game(&mut self, position: u8, state: &dyn State) {
+impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> CatanPlayer for ActionPickerPlayer<T> {
+    fn new_game(&mut self, position: u8, state: &State) {
         self.init_possible_actions(state);
         self.player.new_game(position, state, &self.possible_actions);
     }
-    fn pick_action(&mut self, phase: &Phase, state: &dyn State) -> Action {
-        let legal_actions = self.legal_actions(phase, state);
+    fn pick_action(&mut self, phase: &Phase, state: &State) -> Action {
+        let legal_actions = self.legal_actions(phase, &*state);
         self.player.pick_action(phase, state, &legal_actions)
     }
     fn bad_action(&mut self, error: Error) {
@@ -142,12 +142,12 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> Player for A
     }
 }
 
-impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> Player for IndexPickerPlayer<T> {
-    fn new_game(&mut self, position: u8, state: &dyn State) {
+impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> CatanPlayer for IndexPickerPlayer<T> {
+    fn new_game(&mut self, position: u8, state: &State) {
         self.init_possible_actions(state);
         self.player.new_game(position, state, &self.possible_actions);
     }
-    fn pick_action(&mut self, phase: &Phase, state: &dyn State) -> Action {
+    fn pick_action(&mut self, phase: &Phase, state: &State) -> Action {
         let legal_actions = self.legal_actions(phase, state);
         loop {
             let action = self.player.pick_action(phase, state, &legal_actions) as usize;

@@ -1,0 +1,22 @@
+[package]
+name = "pycatan"
+version = "0.1.0"
+authors = ["Quentin Gendre <swynfel@gmail.com>"]
+edition = "2018"
+
+[lib]
+name = "pycatan"
+crate-type = ["cdylib"]
+
+[dependencies.catan]
+path = "../catan"
+
+[dependencies.pyo3]
+version = "0.8"
+features = ["extension-module"]
+
+[dependencies.numpy]
+version = "0.7"
+
+[dependencies.ndarray]
+version = "0.13"

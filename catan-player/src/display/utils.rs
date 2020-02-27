@@ -43,14 +43,14 @@ fn cursor_position(coord: Coord, half_width: u8, half_height: u8) -> (u16, u16) 
 }
 
 pub trait GridDisplayable {
-    fn display_hex(&self, x: u16, y: u16, f: &mut dyn Write, coord: Coord, state: &dyn State) ->  Result<(), Error>;
+    fn display_hex(&self, x: u16, y: u16, f: &mut dyn Write, coord: Coord, state: &State) ->  Result<(), Error>;
 
-    fn display_path(&self, x: u16, y: u16,  f: &mut dyn Write, coord: Coord, is_i: bool, is_s: bool, state: &dyn State) ->  Result<(), Error>;
+    fn display_path(&self, x: u16, y: u16,  f: &mut dyn Write, coord: Coord, is_i: bool, is_s: bool, state: &State) ->  Result<(), Error>;
 
-    fn display_intersection(&self, x: u16, y: u16,  f: &mut dyn Write, coord: Coord, is_a: bool, state: &dyn State) ->  Result<(), Error>;
+    fn display_intersection(&self, x: u16, y: u16,  f: &mut dyn Write, coord: Coord, is_a: bool, state: &State) ->  Result<(), Error>;
 }
 
-pub fn grid_display<T : GridDisplayable>(displayable: &T, f: &mut dyn Write, state: &dyn State) -> Result<(),Error> {
+pub fn grid_display<T : GridDisplayable>(displayable: &T, f: &mut dyn Write, state: &State) -> Result<(),Error> {
     let half_width = state.get_layout().half_width;
     let half_height = state.get_layout().half_height;
     for i in 0..state.get_layout().size {

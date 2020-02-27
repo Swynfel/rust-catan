@@ -30,14 +30,12 @@ impl TryFrom<u8> for Resource {
     type Error = ();
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Ok(match value {
-            0 => Resource::Brick,
-            1 => Resource::Lumber,
-            2 => Resource::Ore,
-            3 => Resource::Grain,
-            4 => Resource::Wool,
-            _ => return Err(()),
-        })
+        let value: usize = value as usize;
+        if value > Resource::COUNT {
+            Err(())
+        } else {
+            Ok(Resource::ALL[value])
+        }
     }
 }
 

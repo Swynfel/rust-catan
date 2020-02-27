@@ -5,7 +5,7 @@ use termion::clear;
 
 use catan::state::{State, PlayerId};
 use catan::game::{Action, Error, Phase, Notification};
-use catan::player::Player;
+use catan::player::CatanPlayer;
 
 use crate::display::utils::grid_display;
 use crate::display::{PrettyGridDisplay, pretty_player_hand};
@@ -28,14 +28,14 @@ impl TerminalPlayer {
     }
 }
 
-impl Player for TerminalPlayer {
-    fn new_game(&mut self, _position: u8, _: &dyn State) {
+impl CatanPlayer for TerminalPlayer {
+    fn new_game(&mut self, _position: u8, _: &State) {
         write!(self.screen, "{clear}", clear = clear::All).unwrap();
         writeln!(self.screen, "[New game]").unwrap();
         self.screen.flush().unwrap();
     }
 
-    fn pick_action(&mut self, phase: &Phase, state: &dyn State) -> Action {
+    fn pick_action(&mut self, phase: &Phase, state: &State) -> Action {
         // Displays state
         write!(self.screen, "{clear}", clear = clear::All).expect("Failed to clear screen");
         grid_display(&PrettyGridDisplay::INSTANCE, &mut self.screen, state).expect("Failed to draw grid");

@@ -1,6 +1,6 @@
 use crate::utils::{Coord, Resource, Resources};
 
-//type Player = u8;
+//typeCatanPlayer= u8;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Action {

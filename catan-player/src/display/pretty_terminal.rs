@@ -56,7 +56,7 @@ impl PrettyGridDisplay {
 }
 
 impl GridDisplayable for PrettyGridDisplay {
-    fn display_hex(&self, x: u16, y: u16, f: &mut dyn Write, coord: Coord, state: &dyn State) ->  Result<(), Error>{
+    fn display_hex(&self, x: u16, y: u16, f: &mut dyn Write, coord: Coord, state: &State) ->  Result<(), Error>{
         let hex = state.get_static_hex(coord).unwrap_or(Hex::Water);
 
         let value = hex.get_num();
@@ -74,7 +74,7 @@ impl GridDisplayable for PrettyGridDisplay {
         Ok(())
     }
 
-    fn display_path(&self, x: u16, y: u16,  f: &mut dyn Write, coord: Coord, is_i: bool, is_s: bool, state: &dyn State) ->  Result<(), Error> {
+    fn display_path(&self, x: u16, y: u16,  f: &mut dyn Write, coord: Coord, is_i: bool, is_s: bool, state: &State) ->  Result<(), Error> {
         let y = if is_i { y } else { y };
 
         if let Ok(Some(player)) = state.get_dynamic_path(coord) {
@@ -94,7 +94,7 @@ impl GridDisplayable for PrettyGridDisplay {
     }
 
 
-    fn display_intersection(&self, x: u16, y: u16, f: &mut dyn Write, coord: Coord, is_a: bool, state: &dyn State) ->  Result<(), Error> {
+    fn display_intersection(&self, x: u16, y: u16, f: &mut dyn Write, coord: Coord, is_a: bool, state: &State) ->  Result<(), Error> {
         let y = if is_a { y } else { y + 1 };
 
         if let Some(harbor) = state.get_static_harbor(coord).ok() {

@@ -40,10 +40,12 @@ impl From<u8> for PlayerId {
 }
 
 pub trait StateMaker {
-    fn new_empty<'a>(layout: &'a Layout, player_count: u8) -> Box<dyn State + 'a>;
+    fn new_empty(layout: &'static Layout, player_count: u8) -> State;
 }
 
-pub trait State {
+pub type State = Box<dyn StateTrait>;
+
+pub trait StateTrait {
 
     fn get_layout(&self) -> &Layout;
 

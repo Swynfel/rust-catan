@@ -11,7 +11,7 @@ use super::{Action, Phase, Notification};
 /// Modifies a state by applying a given action, and/or changes the phase.action.
 /// The function assumes that the action is legal and that it can be applied without problem.
 /// It is necessary to call [legal](crate::game::legal::legal) beforehand to check if the action can indeed be applied without problem
-pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut dyn State, action: Action, rng: &mut R) -> Option<Notification> {
+pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Action, rng: &mut R) -> Option<Notification> {
     static ERROR_MESSAGE: &'static str = "Apply function failed because action supplied was illegal";
     let player = phase.player();
     match action {

@@ -2,7 +2,7 @@ use crate::utils::Resources;
 use crate::game::Action;
 use crate::state::PlayerId;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Notification {
     ActionPlayed {
         by: PlayerId,

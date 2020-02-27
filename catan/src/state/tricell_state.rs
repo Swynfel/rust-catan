@@ -2,10 +2,10 @@ use crate::board::map::TricellMap;
 use crate::board::{Layout, Error};
 use crate::utils::{Empty, Hex, Harbor, Coord, DevelopmentCards};
 use super::PlayerHand;
-use super::{State, StateMaker, PlayerId};
+use super::{State, StateTrait, StateMaker, PlayerId};
 
-pub struct TricellState<'a> {
-    layout: &'a Layout,
+pub struct TricellState {
+    layout: &'static Layout,
     static_board: Box<TricellMap<Hex,Empty,Harbor>>,
     dynamic_board: Box<TricellMap<Empty,PlayerId,(PlayerId,bool)>>,
     thief: Coord,
@@ -15,12 +15,12 @@ pub struct TricellState<'a> {
     players: Vec<PlayerHand>,
 }
 
-impl TricellState<'_> {
-    pub fn new(layout: &Layout, players: usize) -> TricellState {
+impl TricellState {
+    pub fn new(layout: &'static Layout, players: usize) -> TricellState {
         TricellState {
             layout,
-            static_board: TricellMap::new(layout, Hex::Water, Empty::INSTANCE, Harbor::None),
-            dynamic_board: TricellMap::new(layout, Empty::INSTANCE, PlayerId::NONE, (PlayerId::NONE, false)),
+            static_board: TricellMap::new(&layout, Hex::Water, Empty::INSTANCE, Harbor::None),
+            dynamic_board: TricellMap::new(&layout, Empty::INSTANCE, PlayerId::NONE, (PlayerId::NONE, false)),
             thief: Coord::ZERO,
             development_card: DevelopmentCards::new(),
             longest_road: PlayerId::NONE,
@@ -30,13 +30,13 @@ impl TricellState<'_> {
     }
 }
 
-impl StateMaker for TricellState<'_> {
-    fn new_empty<'a>(layout: &'a Layout, player_count: u8) -> Box<dyn State + 'a> {
+impl StateMaker for TricellState {
+    fn new_empty(layout: &'static Layout, player_count: u8) -> State {
         Box::new(TricellState::new(layout, player_count as usize))
     }
 }
 
-impl State for TricellState<'_> {
+impl StateTrait for TricellState {
     fn get_layout(&self) -> &Layout {
         self.layout
     }

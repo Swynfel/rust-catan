@@ -14,8 +14,7 @@ pub enum Type {
 ///
 /// A more detailed version of [CoordType](enum.CoordType.html)
 ///
-/// Bellow is a representation of the different position using the first letters of the variants
-/// ```
+/// Bellow is a representation of the different position using the first letters of the variants:
 ///         A
 ///     Z       S
 /// V               V
@@ -25,7 +24,7 @@ pub enum Type {
 /// A               A
 ///     S       Z
 ///         V
-/// ```
+///
 pub enum DetailedType {
     /// The empty position between a hex center and it's left path
     LVoid,
