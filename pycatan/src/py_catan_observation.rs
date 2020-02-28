@@ -64,9 +64,9 @@ fn jsettlers_resource(value: usize) -> Resource {
 
 #[pyclass]
 pub(crate) struct PyCatanObservation {
-    actions: Array1<bool>,
-    board: Array3<i32>,
-    flat: Array1<i32>,
+    pub actions: Array1<bool>,
+    pub board: Array3<i32>,
+    pub flat: Array1<i32>,
 }
 
 impl PyCatanObservation {
@@ -98,8 +98,8 @@ impl PyCatanObservation {
         for coord in layout.hexes.iter() {
             let hex = state.get_static_hex(*coord).unwrap();
             if let Hex::Land(hex) = hex {
-                let x = coord.x as usize + layout.half_width as usize;
-                let y = coord.y as usize + layout.half_height as usize;
+                let x = (coord.x + layout.half_width as i8) as usize;
+                let y = (coord.y + layout.half_height as i8) as usize;
                 match hex {
                     LandHex::Desert => { board[(x, y, 5)] = 1; },
                     LandHex::Prod(res, num) => { board[(x, y, jsettlers_u(res))] = num.into(); },
@@ -109,14 +109,14 @@ impl PyCatanObservation {
         for coord in layout.paths.iter() {
             let path = state.get_dynamic_path(*coord).unwrap();
             if let Some(p) = path {
-                let x = coord.x as usize + layout.half_width as usize;
-                let y = coord.y as usize + layout.half_height as usize;
+                let x = (coord.x + layout.half_width as i8) as usize;
+                let y = (coord.y + layout.half_height as i8) as usize;
                 board[(x, y, 6)] = if player == p { 1 } else { -1 };
             }
         };
         for coord in layout.intersections.iter() {
-            let x = coord.x as usize + layout.half_width as usize;
-            let y = coord.y as usize + layout.half_height as usize;
+            let x = (coord.x + layout.half_width as i8) as usize;
+            let y = (coord.y + layout.half_height as i8) as usize;
             let harbor = state.get_static_harbor(*coord).unwrap();
             match harbor {
                 Harbor::Generic => { board[(x, y, 7)] = 5; }

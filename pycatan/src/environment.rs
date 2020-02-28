@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use numpy::convert::IntoPyArray;
 use std::thread;
 use std::sync::mpsc::{channel, Sender, Receiver};
 
@@ -12,8 +13,18 @@ use super::PyCatanObservation;
 #[pyclass]
 pub struct Environment {
     action_send: Sender<u8>,
-    observation_receive: Receiver<PyCatanObservation>,
+    observation_receive: Receiver<Option<PyCatanObservation>>,
     game_thread: thread::JoinHandle<()>,
+}
+
+impl Environment {
+    fn to_py_tuple(py: Python, observation: Option<PyCatanObservation>) -> (PyObject, PyObject, PyObject, PyObject) {
+        if let Some(observation) = observation {
+            (observation.board.into_pyarray(py).to_object(py), observation.flat.into_pyarray(py).to_object(py), observation.actions.into_pyarray(py).to_object(py), false.into_py(py))
+        } else {
+            (py.None(), py.None(), py.None(), true.into_py(py))
+        }
+    }
 }
 
 #[pymethods]
@@ -38,25 +49,25 @@ impl Environment {
         }
     }
 
-    fn start(&mut self) -> PyCatanObservation {
-        self.observation_receive.recv().expect("Failed to read observation")
+    fn start(&mut self, py: Python) -> PyResult<(PyObject, PyObject, PyObject, PyObject)> {
+        Ok(Environment::to_py_tuple(py, self.observation_receive.recv().expect("Failed to read observation")))
     }
 
-    fn play(&mut self, action: u8) -> PyResult<PyCatanObservation> {
+    fn play(&mut self, py: Python, action: u8) -> PyResult<(PyObject, PyObject, PyObject, PyObject)> {
         self.action_send.send(action).expect("Failed to send action");
         self.game_thread.thread().unpark();
-        Ok(self.observation_receive.recv().expect("Failed to read observation"))
+        Ok(Environment::to_py_tuple(py, self.observation_receive.recv().expect("Failed to read observation")))
     }
 }
 
 struct InternalPythonPlayer {
     player: PlayerId,
     action_receive: Receiver<u8>,
-    observation_send: Sender<PyCatanObservation>,
+    observation_send: Sender<Option<PyCatanObservation>>,
 }
 
 impl InternalPythonPlayer {
-    fn new(action_receive: Receiver<u8>, observation_send: Sender<PyCatanObservation>) -> InternalPythonPlayer {
+    fn new(action_receive: Receiver<u8>, observation_send: Sender<Option<PyCatanObservation>>) -> InternalPythonPlayer {
         InternalPythonPlayer {
             player: PlayerId::NONE,
             action_receive,
@@ -74,7 +85,7 @@ impl PickerPlayerTrait for InternalPythonPlayer {
     }
 
     fn pick_action(&mut self, _phase: &Phase, state: &State, legal_actions: &Vec<bool>) -> u8 {
-        self.observation_send.send(PyCatanObservation::new(self.player, state, legal_actions)).expect("Failed sending observation");
+        self.observation_send.send(Some(PyCatanObservation::new(self.player, state, legal_actions))).expect("Failed sending observation");
         thread::park();
         self.action_receive.recv().expect("Failed receiving action")
     }
@@ -83,5 +94,9 @@ impl PickerPlayerTrait for InternalPythonPlayer {
         println!("{:?}", error);
     }
 
-    fn notify(&mut self, _: &Notification) {}
+    fn notify(&mut self, notification: &Notification) {
+        if let Notification::GameFinished { winner } = notification {
+            self.observation_send.send(None).expect("Failed sending game finished");
+        }
+    }
 }
