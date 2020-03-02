@@ -2,14 +2,14 @@ use crate::state::PlayerId;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Phase {
-    InitialPlacement(PlayerId,bool,bool), // (player,placing_second,placing_road)
-    Turn(PlayerId,bool,bool), //(player,dice_rolled,development_card_played)
+    InitialPlacement(PlayerId, bool, bool), //(player,placing_second,placing_road)
+    Turn(PlayerId, TurnPhase, bool), //(player,turn_phase,development_card_played)
     FinishedGame(PlayerId), //(winning_player)
 }
 
 impl Phase {
     pub const START_GAME: Phase = Phase::InitialPlacement(PlayerId::FIRST,false,false);
-    pub const START_TURNS: Phase = Phase::Turn(PlayerId::FIRST,false,false);
+    pub const START_TURNS: Phase = Phase::Turn(PlayerId::FIRST,TurnPhase::PreRoll,false);
 
     pub fn player(&self) -> PlayerId {
         match self {
@@ -25,4 +25,12 @@ impl Phase {
             false
         }
     }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum TurnPhase {
+    PreRoll,
+    Discard,
+    MoveThief,
+    Free
 }

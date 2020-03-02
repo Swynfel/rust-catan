@@ -4,7 +4,7 @@ use crate::state::{State, PlayerId};
 use crate::utils::{Resources, Hex, LandHex, DevelopmentCard};
 use crate::board::utils::topology::Topology;
 
-use super::{Action, Phase, Notification};
+use super::{Action, Phase, TurnPhase, Notification};
 
 /// Applies a legal action
 ///
@@ -19,7 +19,7 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
         // ## Ending Turn
         //
         Action::EndTurn => {
-            *phase = Phase::Turn(PlayerId::from((player.to_u8() + 1) % state.player_count()),false,false);
+            *phase = Phase::Turn(PlayerId::from((player.to_u8() + 1) % state.player_count()), TurnPhase::PreRoll, false);
         }
         //
         // ## Rolling Dice (Should be done automatically for now)
@@ -28,8 +28,8 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
             let roll = rng.gen_range(1, 7) + rng.gen_range(1, 7);
             if roll == 7 {
                 // TODO: Handle thief
-                if let Phase::Turn(_, dice_rolled, _) = phase {
-                    *dice_rolled = true;
+                if let Phase::Turn(_, turn_phase, _) = phase {
+                    *turn_phase = TurnPhase::Free;
                 }
                 return Some(Notification::ThiefRolled);
             } else {
@@ -55,8 +55,8 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                 for (i,resources) in received_resources.iter().enumerate() {
                     state.get_player_hand_mut(PlayerId::from(i as u8)).resources += *resources;
                 }
-                if let Phase::Turn(_, dice_rolled, _) = phase {
-                    *dice_rolled = true;
+                if let Phase::Turn(_, turn_phase, _) = phase {
+                    *turn_phase = TurnPhase::Free;
                 }
                 return Some(Notification::ResourcesRolled { roll, resources: received_resources });
             }

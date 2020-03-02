@@ -1,6 +1,6 @@
 use crate::utils::{Coord, CoordType, Resources};
 use crate::state::{State, PlayerId};
-use crate::game::{Phase, Action, Error};
+use crate::game::{Phase, TurnPhase, Action, Error};
 use crate::board::utils::topology::Topology;
 use crate::board::Error as BoardError;
 
@@ -101,12 +101,12 @@ pub fn legal(phase: &Phase, state: &State, action: Action) -> Result<(), Error> 
         //
         // # Regular Turn Phase
         //
-        Phase::Turn(player, dice_rolled, _) => match action {
+        Phase::Turn(player, turn_phase, _) => match action {
             //
             // ## Ending Turn
             //
             Action::EndTurn => {
-                if *dice_rolled {
+                if *turn_phase == TurnPhase::Free {
                     Ok(())
                 } else {
                     Err(Error::IncoherentAction(action))
@@ -116,7 +116,7 @@ pub fn legal(phase: &Phase, state: &State, action: Action) -> Result<(), Error> 
             // ## Rolling Dice (Should be done automatically for now)
             //
             Action::RollDice => {
-                if *dice_rolled {
+                if *turn_phase == TurnPhase::PreRoll {
                     Err(Error::IncoherentAction(action))
                 } else {
                     Ok(())

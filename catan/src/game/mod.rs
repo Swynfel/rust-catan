@@ -7,7 +7,7 @@ pub mod legal;
 
 pub use error::Error;
 pub use action::{Action, ActionCategory};
-pub use phase::Phase;
+pub use phase::{Phase, TurnPhase};
 pub use notification::Notification;
 
 // --------------------------------------------------------------------------------------------- //
@@ -58,7 +58,7 @@ impl Game {
         }
         loop {
             // If new turn, roll dice automatically
-            if let Phase::Turn(_, false, _) = phase {
+            if let Phase::Turn(_, TurnPhase::PreRoll, _) = phase {
                 if let Some(notification) = apply(&mut phase, &mut state, Action::RollDice, &mut rng) {
                     self.notify_all(notification);
                 }

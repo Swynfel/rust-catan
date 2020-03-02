@@ -41,15 +41,12 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> ActionPicker
         self.possible_actions.push(Action::EndTurn);
         // BuildRoad
         for path in state.get_layout().paths.iter() {
-            self.possible_actions.push(Action::BuildRoad { path: *path })
+            self.possible_actions.push(Action::BuildRoad { path: *path });
         }
-        // BuildSettlement
+        // BuildSettlement and BuildCity
         for intersection in state.get_layout().intersections.iter() {
-            self.possible_actions.push(Action::BuildSettlement { intersection: *intersection })
-        }
-        // BuildCity
-        for intersection in state.get_layout().intersections.iter() {
-            self.possible_actions.push(Action::BuildCity { intersection: *intersection })
+            self.possible_actions.push(Action::BuildSettlement { intersection: *intersection });
+            self.possible_actions.push(Action::BuildCity { intersection: *intersection });
         }
         // TradeBank
         for given in Resource::ALL.iter() {
@@ -94,13 +91,10 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> IndexPickerPlayer<
         for path in state.get_layout().paths.iter() {
             self.possible_actions.push(Action::BuildRoad { path: *path })
         }
-        // BuildSettlement
+        // BuildSettlement and BuildCity
         for intersection in state.get_layout().intersections.iter() {
-            self.possible_actions.push(Action::BuildSettlement { intersection: *intersection })
-        }
-        // BuildCity
-        for intersection in state.get_layout().intersections.iter() {
-            self.possible_actions.push(Action::BuildCity { intersection: *intersection })
+            self.possible_actions.push(Action::BuildSettlement { intersection: *intersection });
+            self.possible_actions.push(Action::BuildCity { intersection: *intersection });
         }
         // TradeBank
         for given in Resource::ALL.iter() {
