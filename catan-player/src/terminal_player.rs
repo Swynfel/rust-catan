@@ -8,11 +8,12 @@ use catan::game::{Action, Error, Phase, Notification};
 use catan::player::CatanPlayer;
 
 use crate::display::utils::grid_display;
-use crate::display::{PrettyGridDisplay, pretty_player_hand};
+use crate::display::{PrettyGridDisplay, pretty_public_player_hand, pretty_private_player_hand};
 use super::action_parser::{parse_action, parse_help};
 
 pub struct TerminalPlayer {
     screen: Stdout,
+    player: PlayerId,
     bad_action: Option<Error>,
     notifications: VecDeque<Notification>,
 }
@@ -22,6 +23,7 @@ impl TerminalPlayer {
         let screen = stdout(); //AlternateScreen::from(stdout());
         TerminalPlayer {
             screen,
+            player: PlayerId::NONE,
             bad_action: None,
             notifications: VecDeque::new(),
         }
@@ -31,8 +33,12 @@ impl TerminalPlayer {
         grid_display(&PrettyGridDisplay::INSTANCE, &mut self.screen, state).expect("Failed to draw grid");
         for i in 0..state.player_count() {
             let player = PlayerId::from(i);
-            let hand = state.get_player_hand(player);
-            pretty_player_hand(&mut self.screen, player, hand).expect("Failed to draw player hand");
+            if player == self.player {
+                pretty_public_player_hand(&mut self.screen, player, state).expect("Failed to draw player hand");
+            } else {
+                pretty_private_player_hand(&mut self.screen, player, state).expect("Failed to draw player hand");
+
+            }
             writeln!(&mut self.screen).expect("Failed to return line");
         }
     }
@@ -51,7 +57,8 @@ impl TerminalPlayer {
 }
 
 impl CatanPlayer for TerminalPlayer {
-    fn new_game(&mut self, _position: PlayerId, _: &State) {
+    fn new_game(&mut self, position: PlayerId, _: &State) {
+        self.player = position;
         write!(self.screen, "{clear}", clear = clear::All).unwrap();
         writeln!(self.screen, "[New game]").unwrap();
         self.screen.flush().unwrap();

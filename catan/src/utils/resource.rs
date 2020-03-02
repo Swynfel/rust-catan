@@ -98,6 +98,10 @@ impl Resources {
         self.wool.cmp(&other.wool),
     ]}
 
+    pub fn total(&self) -> i8 {
+        self.brick + self.lumber + self.ore + self.grain + self.wool
+    }
+
     pub fn valid_trade(&self) -> bool {
         !(self >= &Resources::ZERO) && !(self <= &Resources::ZERO)
     }

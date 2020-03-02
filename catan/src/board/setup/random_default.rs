@@ -52,6 +52,7 @@ const DVP_CARDS: DevelopmentCards =
         victory_point: 5,
     };
 
+#[allow(dead_code)]
 pub fn random_default_setup_simple<T : StateMaker>(player_count: u8) -> State {
     random_default_setup::<T, ThreadRng>(&mut thread_rng(), player_count)
 }

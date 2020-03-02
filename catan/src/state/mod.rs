@@ -91,7 +91,22 @@ pub trait StateTrait {
 
     fn get_longest_road(&self) -> Option<(PlayerId, u8)>;
 
+    /// Resets and recomputes the longest road of a player
+    /// This operation can potentially be expensive since all the possible paths have to be enumerated
+    /// It's better to call it only when a player's road has been broken
+    /// In most situations the only difference is that a new road piece has been placed. In this case calling [update_longest_road] is more efficient
+    fn reset_longest_road(&mut self, player: PlayerId);
+
+    /// Updates a player's longest continous road using a new path
+    /// Tries to find the longest road passing through "root_path", and updates the longest continous road of the player if this path is longer
+    /// Doesn't look at potential long path not using this road
+    /// This function is useful to be called when a new road has been placed, as the new longest road can either be the previous longest road, or a new long road using this new road piece
+    /// In more complicated situation, it's better to call [reset_longest_road], but it is more expensive
+    fn update_longest_road(&mut self, player: PlayerId, root_path: Coord);
+
     fn get_largest_army(&self) -> Option<(PlayerId, u8)>;
+
+    fn update_largest_army(&mut self, player: PlayerId);
 
     // Static Board
     fn set_static_hex(&mut self, coord: Coord, hex: Hex) -> Result<(), Error>;

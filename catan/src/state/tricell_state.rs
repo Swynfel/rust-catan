@@ -1,6 +1,7 @@
 use crate::board::map::TricellMap;
 use crate::board::{Layout, Error};
 use crate::utils::{Empty, Hex, Harbor, Coord, DevelopmentCards};
+use crate::board::utils::topology::Topology;
 use super::PlayerHand;
 use super::{State, StateTrait, StateMaker, PlayerId};
 
@@ -28,6 +29,92 @@ impl TricellState {
             players: vec![PlayerHand::new();players],
         }
     }
+
+    /// Returns a (path, next_intersection) vector with the potential next paths
+    /// No path is returned if 'intersection' is an enemy settlement or city
+    /// The returned paths are connected to 'intersection' and aren't any path from 'used_paths'
+    fn next_chain_paths(&self, player: PlayerId, used_paths: &Vec<Coord>, intersection: Coord) -> Vec<(Coord, Coord)> {
+        // If another player occupies the intersection, interupt pathchain
+        if let Some((p, _)) = self.get_dynamic_intersection(intersection).unwrap() {
+            if player != p {
+                return Vec::new();
+            }
+        }
+        let mut paths = Vec::new();
+        // Check every paths connected to the current intersection
+        for path in self.intersection_path_neighbours(intersection).unwrap() {
+            // If the path has a player's road placed on it...
+            if let Some(p) = self.get_dynamic_path(path).unwrap() {
+                // ...and this player is the correct one...
+                // ...and the road hasn't been used yet...
+                if player == p && !used_paths.contains(&path) {
+                    // ...add this road as a potential path:
+                    // finds the intersection that is connected to the path that isn't the current_intersection
+                    for next_intersection in self.path_intersection_neighbours(path).unwrap() {
+                        if next_intersection != intersection {
+                            paths.push((path, next_intersection));
+                        }
+                    }
+                }
+            }
+        }
+        paths
+    }
+
+    /// Recursive function that returns the longest chain that has 'chain' as a sub-chain
+    fn longest_chain(&self, player: PlayerId, mut chain: PathChain) -> usize {
+        if let Some(head_intersection) = chain.head {
+            let nexts = self.next_chain_paths(player, &chain.paths, head_intersection);
+            if nexts.len() == 0 {
+                chain.head = None
+            } else {
+                let mut length = 0;
+                for (next_path, next_intersection) in nexts {
+                    let mut paths = chain.paths.clone();
+                    paths.push(next_path);
+                    let r = self.longest_chain(player,
+                        PathChain {
+                            paths,
+                            head: Some(next_intersection),
+                            tail: chain.tail,
+                        }
+                    );
+                    if r > length {
+                        length = r;
+                    }
+                }
+                return length;
+            }
+        }
+        if let Some(tail_intersection) = chain.tail {
+            let nexts = self.next_chain_paths(player, &chain.paths, tail_intersection);
+            if nexts.len() > 0 {
+                let mut length = 0;
+                for (next_path, next_intersection) in nexts {
+                    let mut paths = chain.paths.clone();
+                    paths.push(next_path);
+                    let r = self.longest_chain(player,
+                        PathChain {
+                            paths,
+                            head: chain.head,
+                            tail: Some(next_intersection),
+                        }
+                    );
+                    if r > length {
+                        length = r;
+                    }
+                }
+                return length;
+            }
+        }
+        chain.paths.len()
+    }
+}
+
+struct PathChain {
+    paths: Vec<Coord>,
+    head: Option<Coord>,
+    tail: Option<Coord>,
 }
 
 impl StateMaker for TricellState {
@@ -71,11 +158,71 @@ impl StateTrait for TricellState {
     }
 
     fn get_longest_road(&self) -> Option<(PlayerId, u8)> {
-        None
+        if self.longest_road == PlayerId::NONE {
+            None
+        } else {
+            Some((self.longest_road, self.get_player_hand(self.longest_road).continous_road))
+        }
+    }
+
+    // TODO: Try to optimise this function a little more
+    // Some paths are explored about number_of_roads to many times
+    fn reset_longest_road(&mut self, player: PlayerId) {
+        let paths = self.get_layout().paths.clone();
+        for path in paths {
+            if let Some(p) = self.get_dynamic_path(path).unwrap() {
+                if player == p {
+                    self.update_longest_road(player, path)
+                }
+            }
+        }
+    }
+
+    fn update_longest_road(&mut self, player: PlayerId, root_path: Coord) {
+        let old_length = self.get_player_hand(player).continous_road;
+
+        let intersections = self.path_intersection_neighbours(root_path).unwrap();
+        let new_length = self.longest_chain(player,
+            PathChain {
+                paths: vec![root_path],
+                head: Some(intersections[0]),
+                tail: Some(intersections[1]),
+            }
+        ) as u8;
+
+        if new_length > old_length {
+            self.get_player_hand_mut(player).continous_road = new_length;
+        }
+        if new_length < 5 {
+            return;
+        }
+        for (i, hand) in self.players.iter().enumerate() {
+            if i != player.to_usize() && new_length <= hand.continous_road {
+                return;
+            }
+        }
+        self.longest_road = player;
     }
 
     fn get_largest_army(&self) -> Option<(PlayerId, u8)> {
-        None
+        if self.largest_army == PlayerId::NONE {
+            None
+        } else {
+            Some((self.largest_army, self.get_player_hand(self.longest_road).knights))
+        }
+    }
+
+    fn update_largest_army(&mut self, player: PlayerId) {
+        let size = self.get_player_hand(player).knights;
+        if size < 3 {
+            return;
+        }
+        for (i, hand) in self.players.iter().enumerate() {
+            if i != player.to_usize() && size <= hand.knights {
+                return;
+            }
+        }
+        self.largest_army = player;
     }
 
     /*** static ***/

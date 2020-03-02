@@ -69,8 +69,8 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
             state.set_dynamic_path(path, player).expect(ERROR_MESSAGE);
             if phase.is_turn() {
                 state.get_player_hand_mut(player).resources -= Resources::ROAD;
-                // TODO : Recompute longest road
             }
+            state.update_longest_road(player, path);
         }
         //
         // ## Building Settlement
@@ -92,7 +92,24 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                     }
                 }
             }
-            // TODO : Recompute longest road if road broken
+            // Checks if an enemy road was broken
+            let mut neighbour_players = vec![false; state.player_count() as usize];
+            for path in state.intersection_path_neighbours(intersection).unwrap() {
+                if let Some(p) = state.get_dynamic_path(path).unwrap() {
+                    if p != player {
+                        // If it's the p-player's second neighbour road
+                        if neighbour_players[p.to_usize()] {
+                            // Reset his longest road (in case it just got broken by this placement)
+                            state.reset_longest_road(player);
+                            // And exit, since there can only be one broken longest road per settlement
+                            break;
+                        // Else, if it's the first neighbour road
+                        } else {
+                            neighbour_players[p.to_usize()] = true;
+                        }
+                    }
+                }
+            }
         }
         Action::BuildCity { intersection } => {
             state.set_dynamic_intersection(intersection, player, true).expect(ERROR_MESSAGE);
@@ -152,9 +169,16 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                 }
             }
         }
-    // Check if player just won
-    } else if state.get_player_total_vp(player) >= 10 {
-        *phase = Phase::FinishedGame(player);
+    // Check if a player just won
+    } else {
+        // We have to check every player because there is a (very rare) chance that another player just won
+        // if we broke a third player's longest road and enabled this other player to get the longest road and go over 10 victory points
+        for p in 0..state.player_count() {
+            let player = PlayerId::from(p);
+            if state.get_player_total_vp(player) >= 10 {
+                *phase = Phase::FinishedGame(player);
+            }
+        }
     }
     None
 }

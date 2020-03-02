@@ -125,9 +125,35 @@ impl GridDisplayable for PrettyGridDisplay {
 const FULL_LINE: &str = "                                ";
 const WIDTH: u16 = 32;
 
-pub fn pretty_player_hand(f: &mut dyn Write, player: PlayerId, hand: &PlayerHand) ->  Result<(), Error> {
+fn lr_la(player: PlayerId, state: &State) -> String {
+    let lr = state.get_longest_road();
+    let lr = if let Some((p, _)) = lr {
+        if p == player {
+            "LR"
+        } else {
+            "  "
+        }
+    } else {
+        "  "
+    };
+    let la = state.get_largest_army();
+    let la = if let Some((p, _)) = la {
+        if p == player {
+            "LA"
+        } else {
+            "  "
+        }
+    } else {
+        "  "
+    };
+    format!("{} {}", lr, la)
+}
+
+pub fn pretty_public_player_hand(f: &mut dyn Write, player: PlayerId, state: &State) ->  Result<(), Error> {
+    let hand: &PlayerHand = state.get_player_hand(player);
     let player_color = player_color(player);
     write!(f, "{}{}", player_color, FULL_LINE)?;
+    write!(f, "{}{} [{:>2}]", cursor::Left(10), lr_la(player, state), state.get_player_total_vp(player))?;
     write!(f, "{}{} ", cursor::Down(1), cursor::Left(WIDTH))?;
     for resource in Resource::ALL.iter() {
         let resource_draw_type = resource.to_draw_type();
@@ -147,6 +173,33 @@ pub fn pretty_player_hand(f: &mut dyn Write, player: PlayerId, hand: &PlayerHand
             player_color = player_color,
         )?;
     }
+    write!(f, "{}{}{}{}{}",
+        cursor::Down(1),
+        cursor::Left(WIDTH),
+        FULL_LINE,
+        color::Fg(color::Reset),
+        color::Bg(color::Reset)
+    )?;
+    Ok(())
+}
+
+pub fn pretty_private_player_hand(f: &mut dyn Write, player: PlayerId, state: &State) ->  Result<(), Error> {
+    let hand: &PlayerHand = state.get_player_hand(player);
+    let player_color = player_color(player);
+    write!(f, "{}{}", player_color, FULL_LINE)?;
+    write!(f, "{}{} [{:>2}]", cursor::Left(10), lr_la(player, state), state.get_player_total_vp(player))?;
+    write!(f, "{}{} ", cursor::Down(1), cursor::Left(WIDTH))?;
+    let generic_color = DrawType::GenericHarbor.color();
+    write!(f, "         {generic_color}{resource_amount:>2}{player_color}         ",
+        resource_amount = hand.resources.total(),
+        generic_color = generic_color,
+        player_color = player_color)?;
+    write!(f, " ")?;
+    write!(f, "    {generic_color}{dvp_amount:>2}{player_color}    ",
+        dvp_amount = hand.development_cards.total(),
+        generic_color = generic_color,
+        player_color = player_color,
+    )?;
     write!(f, "{}{}{}{}{}",
         cursor::Down(1),
         cursor::Left(WIDTH),
