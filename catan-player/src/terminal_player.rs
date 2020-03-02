@@ -26,18 +26,8 @@ impl TerminalPlayer {
             notifications: VecDeque::new(),
         }
     }
-}
 
-impl CatanPlayer for TerminalPlayer {
-    fn new_game(&mut self, _position: u8, _: &State) {
-        write!(self.screen, "{clear}", clear = clear::All).unwrap();
-        writeln!(self.screen, "[New game]").unwrap();
-        self.screen.flush().unwrap();
-    }
-
-    fn pick_action(&mut self, phase: &Phase, state: &State) -> Action {
-        // Displays state
-        write!(self.screen, "{clear}", clear = clear::All).expect("Failed to clear screen");
+    pub fn write_state(&mut self, state: &State) {
         grid_display(&PrettyGridDisplay::INSTANCE, &mut self.screen, state).expect("Failed to draw grid");
         for i in 0..state.player_count() {
             let player = PlayerId::from(i);
@@ -45,15 +35,38 @@ impl CatanPlayer for TerminalPlayer {
             pretty_player_hand(&mut self.screen, player, hand).expect("Failed to draw player hand");
             writeln!(&mut self.screen).expect("Failed to return line");
         }
+    }
+
+    pub fn write_notifications(&mut self) {
+        for notification in self.notifications.iter() {
+            writeln!(self.screen, "{:?}", notification).expect("Failed to write notification");
+        }
+    }
+
+    pub fn write_error(&mut self) {
+        if let Some(error) = self.bad_action {
+            writeln!(self.screen, "[ERROR] {:?}", error).expect("Failed to write error");
+        }
+    }
+}
+
+impl CatanPlayer for TerminalPlayer {
+    fn new_game(&mut self, _position: PlayerId, _: &State) {
+        write!(self.screen, "{clear}", clear = clear::All).unwrap();
+        writeln!(self.screen, "[New game]").unwrap();
+        self.screen.flush().unwrap();
+    }
+
+    fn pick_action(&mut self, phase: &Phase, state: &State) -> Action {
+        write!(self.screen, "{clear}", clear = clear::All).expect("Failed to clear screen");
+        // Displays state
+        self.write_state(state);
+        // Displays notifications
+        self.write_notifications();
         writeln!(self.screen, "{:?}", phase).unwrap();
         loop {
             // Displays previous error
-            for notification in self.notifications.iter() {
-                writeln!(self.screen, "{:?}", notification).expect("Failed to write notification");
-            }
-            if let Some(error) = self.bad_action {
-                writeln!(self.screen, "[ERROR] {:?}", error).expect("Failed to write error");
-            }
+            self.write_error();
             // Asks action
             writeln!(self.screen, "Enter action among:{help}{clear}", help = parse_help(), clear = clear::AfterCursor).unwrap();
             let mut raw_action = String::new();
@@ -82,5 +95,10 @@ impl CatanPlayer for TerminalPlayer {
         while self.notifications.len() > 8 {
             self.notifications.pop_front();
         }
+    }
+
+    fn results(&mut self, state: &State, winner: PlayerId) {
+        self.write_state(state);
+        writeln!(self.screen, "Winner : {:?}", winner).unwrap();
     }
 }

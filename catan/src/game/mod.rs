@@ -54,7 +54,7 @@ impl Game {
         let mut phase = Phase::START_GAME;
 
         for (i, player) in players_order.iter().enumerate() {
-            self.players[*player].new_game(i as u8, &state);
+            self.players[*player].new_game(PlayerId::from(i), &state);
         }
         loop {
             // If new turn, roll dice automatically
@@ -65,7 +65,9 @@ impl Game {
             }
             // If the game is finished, exit
             else if let Phase::FinishedGame(winner) = phase {
-                self.notify_all(Notification::GameFinished { winner });
+                for player in players_order.iter() {
+                    self.players[*player].results(&state, winner);
+                }
                 return Notification::GameFinished { winner };
             }
 

@@ -39,6 +39,12 @@ impl From<u8> for PlayerId {
     }
 }
 
+impl From<usize> for PlayerId {
+    fn from(value: usize) -> Self {
+        PlayerId(value as u8)
+    }
+}
+
 pub trait StateMaker {
     fn new_empty(layout: &'static Layout, player_count: u8) -> State;
 }

@@ -1,5 +1,5 @@
-use crate::state::State;
-use crate::game::{Action, ActionCategory, Notification, Error, Phase, legal};
+use crate::state::{State, PlayerId};
+use crate::game::{Action, Notification, Error, Phase, legal};
 use crate::utils::Resource;
 use super::CatanPlayer;
 
@@ -7,10 +7,11 @@ pub trait PickerPlayerTrait {
     type ACTIONS;
     type PICKED;
 
-    fn new_game(&mut self, position: u8, state: &State, possible_actions: &Vec<Action>);
+    fn new_game(&mut self, position: PlayerId, state: &State, possible_actions: &Vec<Action>);
     fn pick_action(&mut self, phase: &Phase, state: &State, legal_actions: &Self::ACTIONS) -> Self::PICKED;
     fn bad_action(&mut self, error: Error);
     fn notify(&mut self, notification: &Notification);
+    fn results(&mut self, state: &State, winner: PlayerId);
 }
 
 pub struct ActionPickerPlayer<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> {
@@ -126,27 +127,35 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> IndexPickerPlayer<
 }
 
 impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> CatanPlayer for ActionPickerPlayer<T> {
-    fn new_game(&mut self, position: u8, state: &State) {
+    fn new_game(&mut self, position: PlayerId, state: &State) {
         self.init_possible_actions(state);
-        self.player.new_game(position, state, &self.possible_actions);
+        self.player.new_game(position, state, &self.possible_actions)
     }
+
     fn pick_action(&mut self, phase: &Phase, state: &State) -> Action {
         let legal_actions = self.legal_actions(phase, &*state);
         self.player.pick_action(phase, state, &legal_actions)
     }
+
     fn bad_action(&mut self, error: Error) {
-        self.player.bad_action(error);
+        self.player.bad_action(error)
     }
+
     fn notify(&mut self, notification: &Notification) {
-        self.player.notify(notification);
+        self.player.notify(notification)
+    }
+
+    fn results(&mut self, state: &State, winner: PlayerId) {
+        self.player.results(state, winner)
     }
 }
 
 impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> CatanPlayer for IndexPickerPlayer<T> {
-    fn new_game(&mut self, position: u8, state: &State) {
+    fn new_game(&mut self, position: PlayerId, state: &State) {
         self.init_possible_actions(state);
         self.player.new_game(position, state, &self.possible_actions);
     }
+
     fn pick_action(&mut self, phase: &Phase, state: &State) -> Action {
         let legal_actions = self.legal_actions(phase, state);
         loop {
@@ -157,10 +166,16 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> CatanPlayer for In
             self.player.bad_action(Error::ActionNotUnderstood)
         }
     }
+
     fn bad_action(&mut self, error: Error) {
         self.player.bad_action(error);
     }
+
     fn notify(&mut self, notification: &Notification) {
         self.player.notify(notification);
+    }
+
+    fn results(&mut self, state: &State, winner: PlayerId) {
+        self.player.results(state, winner)
     }
 }
