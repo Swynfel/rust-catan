@@ -28,6 +28,17 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
             let roll = rng.gen_range(1, 7) + rng.gen_range(1, 7);
             if roll == 7 {
                 // TODO: Handle thief
+                for p in 0..state.player_count() {
+                    let player = PlayerId::from(p);
+                    let player_resources = state.get_player_hand(player).resources;
+                    if player_resources.total() >= 7 {
+                        for resource in Resource::ALL.iter() {
+                            let resource_count = player_resources[*resource] / 2;
+                            state.get_player_hand_mut(player).resources[*resource] -= resource_count;
+                            state.get_bank_resources_mut()[*resource] += resource_count;
+                        }
+                    }
+                }
                 if let Phase::Turn(_, turn_phase, _) = phase {
                     *turn_phase = TurnPhase::Free;
                 }
@@ -117,6 +128,7 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                 for hex in state.intersection_hex_neighbours(intersection).expect(ERROR_MESSAGE) {
                     if let Hex::Land(LandHex::Prod(res, _)) = state.get_static_hex(hex).expect(ERROR_MESSAGE) {
                         state.get_player_hand_mut(player).resources[res] += 1;
+                        state.get_bank_resources()[res] -= 1;
                     }
                 }
             }
