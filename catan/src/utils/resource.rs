@@ -69,6 +69,7 @@ impl Resources {
     pub const SETTLEMENT: Resources = Resources::new(1,1,0,1,1);
     pub const CITY: Resources = Resources::new(0,0,3,2,0);
     pub const DVP_CARD: Resources = Resources::new(0,0,1,1,1);
+    pub const STARTING_BANK: Resources = Resources::new(19,19,19,19,19);
 
     pub const fn new(brick: i8, lumber: i8, ore :i8, grain: i8, wool: i8) -> Self {
         Resources {

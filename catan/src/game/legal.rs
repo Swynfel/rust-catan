@@ -177,6 +177,8 @@ pub fn legal(phase: &Phase, state: &State, action: Action) -> Result<(), Error> 
                 let rate = hand.harbor.rate(given);
                 if hand.resources[given] < rate as i8 {
                     Err(Error::NotEnoughResources { required: Resources::new_one(given, rate as i8), have: hand.resources })
+                } else if state.get_bank_resources()[asked] <= 0 {
+                    Err(Error::NoMoreResourceInBank(asked))
                 } else {
                     Ok(())
                 }

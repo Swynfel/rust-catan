@@ -9,7 +9,7 @@ pub use tricell_state::TricellState;
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct PlayerId(u8);
 
-use crate::utils::{Hex, Harbor, Coord, DevelopmentCards};
+use crate::utils::{Hex, Harbor, Coord, DevelopmentCards, Resources};
 use crate::board::{Layout, Error};
 
 impl PlayerId {
@@ -60,6 +60,10 @@ pub trait StateTrait {
     fn get_development_cards(&self) -> DevelopmentCards;
 
     fn get_development_cards_mut(&mut self) -> &mut DevelopmentCards;
+
+    fn get_bank_resources(&self) -> Resources;
+
+    fn get_bank_resources_mut(&mut self) -> &mut Resources;
 
     fn get_thief_hex(&self) -> Coord;
 

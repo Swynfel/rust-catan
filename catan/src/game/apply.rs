@@ -1,7 +1,7 @@
 use rand::Rng;
 
 use crate::state::{State, PlayerId};
-use crate::utils::{Resources, Hex, LandHex, DevelopmentCard};
+use crate::utils::{Resource, Resources, Hex, LandHex, DevelopmentCard};
 use crate::board::utils::topology::Topology;
 
 use super::{Action, Phase, TurnPhase, Notification};
@@ -34,6 +34,7 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                 return Some(Notification::ThiefRolled);
             } else {
                 let mut received_resources = vec![Resources::ZERO; state.player_count() as usize];
+                let mut taken_resources = Resources::ZERO;
                 // For each hex...
                 for hex in state.get_layout().hexes.iter() {
                     // ...that produces resources...
@@ -45,8 +46,33 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                                 // ...with a settlement or city...
                                 if let Some((player, is_city)) = state.get_dynamic_intersection(intersection).expect("Failed to inspect intersection") {
                                     // ...and add the resources to the corresponding player
-                                    received_resources[player.to_usize()][res] += if is_city {2} else {1};
+                                    let r = if is_city {2} else {1};
+                                    received_resources[player.to_usize()][res] += r;
+                                    taken_resources[res] += r;
                                 }
+                            }
+                        }
+                    }
+                }
+                // Check that the bank has enough Resources
+                let bank = state.get_bank_resources_mut();
+                for res in Resource::ALL.iter() {
+                    // If there is enough resource in the bank for everyone...
+                    if bank[*res] >= taken_resources[*res] {
+                        // ...remove them
+                        bank[*res] -= taken_resources[*res];
+                    } else {
+                        let mut askers: Vec<&mut Resources> = received_resources.iter_mut()
+                            .filter(|resources| resources[*res] > 0).collect();
+                        // If there is only one player that requires the resource...
+                        if askers.len() == 1 {
+                            // ...give him what is left
+                            askers[0][*res] = bank[*res];
+                            bank[*res] = 0;
+                        } else {
+                            // ...no player gets anything
+                            for asker in askers {
+                                asker[*res] = 0;
                             }
                         }
                     }
@@ -69,6 +95,7 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
             state.set_dynamic_path(path, player).expect(ERROR_MESSAGE);
             if phase.is_turn() {
                 state.get_player_hand_mut(player).resources -= Resources::ROAD;
+                *state.get_bank_resources_mut() += Resources::ROAD;
             }
             state.update_longest_road(player, path);
         }
@@ -84,6 +111,7 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
             hand.harbor.add(harbor);
             if phase.is_turn() {
                 hand.resources -= Resources::SETTLEMENT;
+                *state.get_bank_resources_mut() += Resources::SETTLEMENT;
             } else if *phase == Phase::InitialPlacement(player, true, false) {
                 // Gives surrounding resources when placing the second settlement of the initial phase
                 for hex in state.intersection_hex_neighbours(intersection).expect(ERROR_MESSAGE) {
@@ -113,6 +141,7 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
         }
         Action::BuildCity { intersection } => {
             state.set_dynamic_intersection(intersection, player, true).expect(ERROR_MESSAGE);
+            *state.get_bank_resources_mut() += Resources::CITY;
             let hand = state.get_player_hand_mut(player);
             hand.resources -= Resources::CITY;
             hand.settlement_pieces += 1;
@@ -122,12 +151,17 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
 
         Action::TradeBank { given, asked } => {
             let hand = state.get_player_hand_mut(player);
-            hand.resources[given] -= hand.harbor.rate(given) as i8;
+            let given_count = hand.harbor.rate(given) as i8;
+            hand.resources[given] -= given_count;
             hand.resources[asked] += 1;
+            let bank = state.get_bank_resources_mut();
+            bank[given] += given_count;
+            bank[asked] -= 1;
         }
 
         Action::BuyDevelopment => {
             state.get_player_hand_mut(player).resources -= Resources::DVP_CARD;
+            *state.get_bank_resources_mut() += Resources::DVP_CARD;
             let development = state.get_development_cards_mut();
             let mut picked = rng.gen_range(0, development.total());
             for dvp in DevelopmentCard::ALL.iter() {
@@ -182,166 +216,3 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
     }
     None
 }
-
-/*
-fn apply(phase: &mut Phase, state: &mut dyn State, action: Action) -> Result<(), Error> {
-    match phase {
-        //
-        // # Initial Placement Phase
-        //
-        Phase::InitialPlacement(player, placing_second, placing_road) => {
-            //
-            // ## Building a Settlement
-            //
-            if !*placing_road {
-                if let Action::BuildSettlement { intersection } = action {
-                    if legal::available_settlement_position(intersection, state)? {
-                        // Placing Settlement
-                        state.set_dynamic_intersection(intersection, *player, false)?;
-                        // Changing Phase
-                        *placing_road = true;
-                        Ok(())
-                    } else {
-                        Err(Error::IllegalAction(action))
-                    }
-                } else {
-                    Err(Error::IncoherentAction(action))
-                }
-            //
-            // ## Building a Road
-            //
-            } else {
-                if let Action::BuildRoad { path } = action {
-                    if legal::allowed_initial_road_placement(path, *player, state)? {
-                        // We don't have to check it is unoccupied because the Settlement could not have been placed next to another existing road
-                        state.set_dynamic_path(path, *player)?;
-                        // Changing Phase
-                        *placing_road = false;
-                        // If first placement
-                        if !*placing_second {
-                            if player.to_u8() == state.player_count() - 1 {
-                                // If reached last player: switch to second placement
-                                *placing_second = true;
-                            } else {
-                                // Else change player clockwise
-                                *player = PlayerId::from(player.to_u8() + 1);
-                            }
-                        // Else second placement
-                        } else {
-                            if *player == PlayerId::FIRST {
-                                // If back to first player: switch to Turn-type phase
-                                *phase = Phase::START_TURNS;
-                            } else {
-                                // Else change player counter-clockwise
-                                *player = PlayerId::from(player.to_u8() - 1);
-                            }
-                        }
-                        Ok(())
-                    } else {
-                        Err(Error::IllegalAction(action))
-                    }
-                } else {
-                    Err(Error::IncoherentAction(action))
-                }
-            }
-        }
-        //
-        // # Regular Turn Phase
-        //
-        Phase::Turn(player, dice_rolled, _) => match action {
-            //
-            // ## Ending Turn
-            //
-            Action::EndTurn => {
-                if *dice_rolled {
-                    // Changing Phase
-                    *phase = Phase::Turn(PlayerId::from((player.to_u8() + 1) % state.player_count()),false,false);
-                    Ok(())
-                } else {
-                    Err(Error::IncoherentAction(action))
-                }
-            }
-            //
-            // ## Rolling Dice (Should be done automatically for now)
-            //
-            Action::RollDice => {
-                if *dice_rolled {
-                    Err(Error::IncoherentAction(action))
-                } else {
-                    // Changing phase
-                    *dice_rolled = true;
-                    Ok(())
-                }
-            }
-            //
-            // ## Building Road
-            //
-            Action::BuildRoad { path } => {
-                // If: we are next to a road...
-                if legal::connected_position(path, *player, state)?
-                    // ...the position is empty...
-                    && state.get_dynamic_path(path)?.is_none()
-                    // ...the player has a road piece left...
-                    && state.get_player_hand(*player).road_pieces >= 1
-                    // ...and the player has enough resources for the road
-                    && state.get_player_hand(*player).resources >= Resources::ROAD {
-
-                    state.set_dynamic_path(path, *player)?;
-                    state.get_player_hand_mut(*player).resources -= Resources::ROAD;
-                    state.get_player_hand_mut(*player).road_pieces -= 1;
-                    // TODO : Recompute longest road
-                    Ok(())
-                } else {
-                    Err(Error::IllegalAction(action))
-                }
-            }
-            //
-            // ## Building Settlement
-            //
-            Action::BuildSettlement { intersection } => {
-                // If: we are next to a road...
-                if legal::connected_position(intersection, *player, state)?
-                    // ...the position is available (no settlement on it or next to it)...
-                    && legal::available_settlement_position(intersection, state)?
-                    // ...and the player has enough resources for the settlement
-                    && state.get_player_hand(*player).resources >= Resources::SETTLEMENT {
-
-                    state.set_dynamic_intersection(intersection, *player, false)?;
-                    let mut hand = state.get_player_hand_mut(*player);
-                    hand.resources -= Resources::SETTLEMENT;
-                    hand.settlement_pieces -= 1;
-                    hand.building_vp += 1;
-                    // TODO : Recompute longest road if road broken
-                    Ok(())
-                } else {
-                    Err(Error::IllegalAction(action))
-                }
-            }
-            Action::BuildCity { intersection } => {
-                // If: we already own a settlement at the position
-                if Some((*player, false)) == state.get_dynamic_intersection(intersection)?
-                    // ...and the player has enough resources for the city
-                    && state.get_player_hand(*player).resources >= Resources::CITY {
-
-                    state.set_dynamic_intersection(intersection, *player, true)?;
-                    let mut hand = state.get_player_hand_mut(*player);
-                    hand.resources -= Resources::CITY;
-                    hand.settlement_pieces += 1;
-                    hand.city_pieces -= 1;
-                    hand.building_vp += 1;
-                    // TODO: Check pieces and add one settlement and remove one city
-                    Ok(())
-                } else {
-                    Err(Error::IllegalAction(action))
-                }
-            }
-
-            Action::TradeBank { given, asked } => unimplemented!(),
-
-            Action::BuyDevelopment => unimplemented!(),
-            _ => unimplemented!(),
-        }
-        _ => panic!("Game already finished"),
-    }
-}
-*/

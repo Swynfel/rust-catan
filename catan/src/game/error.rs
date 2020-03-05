@@ -12,7 +12,8 @@ pub enum Error {
     NotEnoughResources {
         required: Resources,
         have: Resources,
-    }
+    },
+    NoMoreResourceInBank(Resource),
 }
 
 impl From<BoardError> for Error {

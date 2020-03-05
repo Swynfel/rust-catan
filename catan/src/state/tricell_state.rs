@@ -1,6 +1,6 @@
 use crate::board::map::TricellMap;
 use crate::board::{Layout, Error};
-use crate::utils::{Empty, Hex, Harbor, Coord, DevelopmentCards};
+use crate::utils::{Empty, Hex, Harbor, Coord, DevelopmentCards, Resources};
 use crate::board::utils::topology::Topology;
 use super::PlayerHand;
 use super::{State, StateTrait, StateMaker, PlayerId};
@@ -14,6 +14,7 @@ pub struct TricellState {
     longest_road: PlayerId,
     largest_army: PlayerId,
     players: Vec<PlayerHand>,
+    bank_resources: Resources,
 }
 
 impl TricellState {
@@ -27,6 +28,7 @@ impl TricellState {
             longest_road: PlayerId::NONE,
             largest_army: PlayerId::NONE,
             players: vec![PlayerHand::new();players],
+            bank_resources: Resources::STARTING_BANK,
         }
     }
 
@@ -140,6 +142,14 @@ impl StateTrait for TricellState {
         &mut self.development_card
     }
 
+    fn get_bank_resources(&self) -> Resources {
+        self.bank_resources
+    }
+
+    fn get_bank_resources_mut(&mut self) -> &mut Resources {
+        &mut self.bank_resources
+    }
+
     fn get_thief_hex(&self) -> Coord {
         self.thief
     }
@@ -148,6 +158,7 @@ impl StateTrait for TricellState {
         self.thief = coord
     }
 
+    // --- player related --- //
 
     fn get_player_hand(&self, player: PlayerId) -> &PlayerHand {
         &self.players[player.to_u8() as usize]
@@ -225,7 +236,8 @@ impl StateTrait for TricellState {
         self.largest_army = player;
     }
 
-    /*** static ***/
+    // --- static board --- //
+
     fn set_static_hex(&mut self, coord: Coord, hex: Hex) -> Result<(), Error>{
         Ok(self.static_board.set_hex(coord, hex)?)
     }
@@ -242,7 +254,8 @@ impl StateTrait for TricellState {
         Ok(self.static_board.get_intersection(coord)?)
     }
 
-    /*** dynamic ***/
+    // --- dynamic board --- //
+
     fn set_dynamic_path(&mut self, coord: Coord, player: PlayerId) -> Result<(), Error>{
         Ok(self.dynamic_board.set_path(coord, player)?)
     }
