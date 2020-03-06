@@ -8,7 +8,7 @@ use catan::player::{IndexPickerPlayer, PickerPlayerTrait};
 use catan::player::Randomy;
 use catan::game::{Phase, Action, Error, Notification};
 use catan::state::{State, PlayerId};
-use super::PyCatanObservation;
+use super::{PyCatanObservation, PyObservationFormat};
 
 #[pyclass]
 pub struct Environment {
@@ -32,7 +32,9 @@ impl Environment {
 impl Environment {
 
     #[staticmethod]
-    fn new(opponents: usize) -> Environment {
+    #[args(format, opponents = 2)]
+    fn new(format: &PyObservationFormat, opponents: usize) -> Environment {
+        let format = *format;
         let (action_send, action_receive) = channel();
         let (observation_send, observation_receive) = channel();
         let (result_send, result_receive) = channel();
@@ -41,7 +43,7 @@ impl Environment {
             for _ in 0..opponents {
                 game.add_player(Box::new(Randomy::new_player()));
             };
-            game.add_player(Box::new(IndexPickerPlayer::new(InternalPythonPlayer::new(action_receive, observation_send, result_send))));
+            game.add_player(Box::new(IndexPickerPlayer::new(InternalPythonPlayer::new(format, action_receive, observation_send, result_send))));
             loop {
                 game.play();
             }
@@ -71,17 +73,20 @@ impl Environment {
 
 struct InternalPythonPlayer {
     player: PlayerId,
+    observation_format: PyObservationFormat,
     action_receive: Receiver<u8>,
     observation_send: Sender<Option<PyCatanObservation>>,
     result_send: Sender<(u8,bool)>,
 }
 
 impl InternalPythonPlayer {
-    fn new(action_receive: Receiver<u8>,
+    fn new(format: PyObservationFormat,
+        action_receive: Receiver<u8>,
         observation_send: Sender<Option<PyCatanObservation>>,
         result_send: Sender<(u8,bool)>) -> InternalPythonPlayer {
         InternalPythonPlayer {
             player: PlayerId::NONE,
+            observation_format: format,
             action_receive,
             observation_send,
             result_send,
@@ -98,7 +103,7 @@ impl PickerPlayerTrait for InternalPythonPlayer {
     }
 
     fn pick_action(&mut self, _phase: &Phase, state: &State, legal_actions: &Vec<bool>) -> u8 {
-        self.observation_send.send(Some(PyCatanObservation::new(self.player, state, legal_actions))).expect("Failed sending observation");
+        self.observation_send.send(Some(PyCatanObservation::new(self.observation_format, self.player, state, legal_actions))).expect("Failed sending observation");
         thread::park();
         self.action_receive.recv().expect("Failed receiving action")
     }

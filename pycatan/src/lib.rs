@@ -4,11 +4,12 @@ mod py_catan_observation;
 use pyo3::prelude::*;
 
 use environment::Environment;
-use py_catan_observation::PyCatanObservation;
+use py_catan_observation::{PyCatanObservation, PyObservationFormat};
 
 #[pymodule]
 fn pycatan(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Environment>()?;
+    m.add_class::<PyObservationFormat>()?;
 
     Ok(())
 }

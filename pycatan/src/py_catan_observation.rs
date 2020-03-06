@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use numpy::{IntoPyArray, PyArrayDyn};
 
 use catan::state::{State, PlayerId};
-use catan::utils::{Hex, LandHex, Harbor, Resource};
+use catan::utils::{Hex, LandHex, Harbor, Resource, Coord};
 
 #[pymodule]
 fn rust_ext(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -63,6 +63,39 @@ fn jsettlers_resource(value: usize) -> Resource {
 }
 
 #[pyclass]
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct PyObservationFormat {
+    pub half_width: usize,
+    pub half_height: usize,
+    pub width: usize,
+    pub height: usize,
+}
+
+impl PyObservationFormat {
+    pub fn map(&self, coord: Coord) -> (usize, usize) {
+        let x = (coord.x + self.half_width as i8) as usize;
+        let y = (coord.y + self.half_height as i8) as usize;
+        (x,y)
+    }
+}
+
+#[pymethods]
+impl PyObservationFormat {
+
+    #[new]
+    #[staticmethod]
+    #[args(half_width = 10, half_height = 5)]
+    pub fn new(half_width: usize, half_height: usize) -> Self {
+        PyObservationFormat {
+            half_width,
+            half_height,
+            width: 2*half_width+1,
+            height: 2*half_height+1,
+        }
+    }
+}
+
+#[pyclass]
 pub(crate) struct PyCatanObservation {
     pub actions: Array1<bool>,
     pub board: Array3<i32>,
@@ -70,7 +103,7 @@ pub(crate) struct PyCatanObservation {
 }
 
 impl PyCatanObservation {
-    pub(crate) fn new(player: PlayerId, state: &State, legal_actions: &Vec<bool>) -> PyCatanObservation {
+    pub(crate) fn new(format: PyObservationFormat, player: PlayerId, state: &State, legal_actions: &Vec<bool>) -> PyCatanObservation {
         // flat
         let mut flat = Array1::<i32>::zeros(11);
         let hand = &state.get_player_hand(player);
@@ -93,13 +126,12 @@ impl PyCatanObservation {
             }
         };
         // board
-        let mut board = Array3::<i32>::zeros((21,13,9));
+        let mut board = Array3::<i32>::zeros((format.width,format.height,9));
         let layout = state.get_layout();
         for coord in layout.hexes.iter() {
             let hex = state.get_static_hex(*coord).unwrap();
             if let Hex::Land(hex) = hex {
-                let x = (coord.x + layout.half_width as i8) as usize;
-                let y = (coord.y + layout.half_height as i8) as usize;
+                let (x,y) = format.map(*coord);
                 match hex {
                     LandHex::Desert => { board[(x, y, 5)] = 1; },
                     LandHex::Prod(res, num) => { board[(x, y, jsettlers_u(res))] = num.into(); },
@@ -109,14 +141,12 @@ impl PyCatanObservation {
         for coord in layout.paths.iter() {
             let path = state.get_dynamic_path(*coord).unwrap();
             if let Some(p) = path {
-                let x = (coord.x + layout.half_width as i8) as usize;
-                let y = (coord.y + layout.half_height as i8) as usize;
+                let (x,y) = format.map(*coord);
                 board[(x, y, 6)] = if player == p { 1 } else { -1 };
             }
         };
         for coord in layout.intersections.iter() {
-            let x = (coord.x + layout.half_width as i8) as usize;
-            let y = (coord.y + layout.half_height as i8) as usize;
+            let (x,y) = format.map(*coord);
             let harbor = state.get_static_harbor(*coord).unwrap();
             match harbor {
                 Harbor::Generic => { board[(x, y, 7)] = 5; }
