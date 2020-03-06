@@ -13,11 +13,3 @@ fn pycatan(_py: Python, m: &PyModule) -> PyResult<()> {
 
     Ok(())
 }
-
-#[cfg(test)]
-mod test {
-    #[test]
-    fn test() {
-
-    }
-}

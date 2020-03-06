@@ -67,3 +67,10 @@ impl Layout {
         (y <= self.half_height) && (x + y <= self.half_width + 1)
     }
 }
+
+#[allow(dead_code)]
+pub fn print_layout(layout: &Layout) {
+    println!("hexes {:?}", layout.hexes);
+    println!("paths {:?}", layout.paths);
+    println!("intersections {:?}", layout.intersections);
+}
