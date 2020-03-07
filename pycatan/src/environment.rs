@@ -1,3 +1,4 @@
+use ndarray::Array1;
 use pyo3::prelude::*;
 use numpy::convert::IntoPyArray;
 use std::thread;
@@ -11,16 +12,16 @@ use catan::state::{State, PlayerId};
 use super::{PyCatanObservation, PyObservationFormat};
 
 #[pyclass]
-pub struct Environment {
-    action_send: Sender<u8>,
-    observation_receive: Receiver<Option<PyCatanObservation>>,
-    result_receive: Receiver<(u8,bool)>,
+pub struct SingleEnvironment {
+    action_sender: Sender<u8>,
+    observation_receiver: Receiver<Option<(u8, PyCatanObservation)>>,
+    result_receiver: Receiver<(u8,bool)>,
     game_thread: thread::JoinHandle<()>,
 }
 
-impl Environment {
-    fn to_py_tuple(py: Python, observation: Option<PyCatanObservation>) -> (PyObject, PyObject, PyObject, PyObject) {
-        if let Some(observation) = observation {
+impl SingleEnvironment {
+    fn to_py_tuple(py: Python, observation: Option<(u8, PyCatanObservation)>) -> (PyObject, PyObject, PyObject, PyObject) {
+        if let Some((_, observation)) = observation {
             (observation.board.into_pyarray(py).to_object(py), observation.flat.into_pyarray(py).to_object(py), observation.actions.into_pyarray(py).to_object(py), false.into_py(py))
         } else {
             (py.None(), py.None(), py.None(), true.into_py(py))
@@ -29,67 +30,153 @@ impl Environment {
 }
 
 #[pymethods]
-impl Environment {
+impl SingleEnvironment {
 
     #[staticmethod]
     #[args(format, opponents = 2)]
-    fn new(format: &PyObservationFormat, opponents: usize) -> Environment {
+    fn new(format: &PyObservationFormat, opponents: usize) -> SingleEnvironment {
         let format = *format;
-        let (action_send, action_receive) = channel();
-        let (observation_send, observation_receive) = channel();
-        let (result_send, result_receive) = channel();
+        let (action_sender, action_receiver) = channel();
+        let (observation_sender, observation_receiver) = channel();
+        let (result_sender, result_receiver) = channel();
         let game_thread = thread::spawn(move || {
             let mut game = Game::new();
             for _ in 0..opponents {
                 game.add_player(Box::new(Randomy::new_player()));
             };
-            game.add_player(Box::new(IndexPickerPlayer::new(InternalPythonPlayer::new(format, action_receive, observation_send, result_send))));
+            game.add_player(Box::new(IndexPickerPlayer::new(InternalPythonPlayer::new(0, format, action_receiver, observation_sender, result_sender))));
             loop {
                 game.play();
             }
         });
-        Environment {
-            action_send,
-            observation_receive,
-            result_receive,
+        SingleEnvironment {
+            action_sender,
+            observation_receiver,
+            result_receiver,
             game_thread,
         }
     }
 
     fn start(&mut self, py: Python) -> PyResult<(PyObject, PyObject, PyObject, PyObject)> {
-        Ok(Environment::to_py_tuple(py, self.observation_receive.recv().expect("Failed to read start observation")))
+        Ok(SingleEnvironment::to_py_tuple(py, self.observation_receiver.recv().expect("Failed to read start observation")))
     }
 
     fn play(&mut self, py: Python, action: u8) -> PyResult<(PyObject, PyObject, PyObject, PyObject)> {
-        self.action_send.send(action).expect("Failed to send action");
+        self.action_sender.send(action).expect("Failed to send action");
         self.game_thread.thread().unpark();
-        Ok(Environment::to_py_tuple(py, self.observation_receive.recv().expect("Failed to read play observation")))
+        Ok(SingleEnvironment::to_py_tuple(py, self.observation_receiver.recv().expect("Failed to read play observation")))
     }
 
     fn result(&mut self, _py: Python) -> PyResult<(u8,bool)> {
-        Ok(self.result_receive.recv().expect("Failed to read results"))
+        Ok(self.result_receiver.recv().expect("Failed to read results"))
+    }
+}
+
+
+#[pyclass]
+pub struct MultiEnvironment {
+    players: usize,
+    action_senders: Vec<Sender<u8>>,
+    observation_receiver: Receiver<Option<(u8, PyCatanObservation)>>,
+    result_receivers: Vec<Receiver<(u8,bool)>>,
+    game_thread: thread::JoinHandle<()>,
+}
+
+impl MultiEnvironment {
+    fn to_py_tuple(py: Python, observation: Option<(u8, PyCatanObservation)>) -> (u8, PyObject, PyObject, PyObject, PyObject) {
+        if let Some((id, observation)) = observation {
+            (id, observation.board.into_pyarray(py).to_object(py), observation.flat.into_pyarray(py).to_object(py), observation.actions.into_pyarray(py).to_object(py), false.into_py(py))
+        } else {
+            (0, py.None(), py.None(), py.None(), true.into_py(py))
+        }
+    }
+}
+
+#[pymethods]
+impl MultiEnvironment {
+
+    #[staticmethod]
+    #[args(format, players = 3)]
+    fn new(format: &PyObservationFormat, players: usize) -> MultiEnvironment {
+        let format = *format;
+        let mut action_senders = Vec::new();
+        let mut action_receivers = Vec::new();
+        let mut result_senders = Vec::new();
+        let mut result_receivers = Vec::new();
+        for _ in 0..players {
+            let (action_sender, action_receiver) = channel();
+            let (result_sender, result_receiver) = channel();
+            action_senders.push(action_sender);
+            action_receivers.push(action_receiver);
+            result_senders.push(result_sender);
+            result_receivers.push(result_receiver);
+        }
+        let (observation_sender, observation_receiver) = channel();
+        let game_thread = thread::spawn(move || {
+            let mut game = Game::new();
+            for (id, (action_receiver, result_sender)) in action_receivers.into_iter().zip(result_senders.into_iter()).enumerate() {
+                game.add_player(Box::new(IndexPickerPlayer::new(
+                    InternalPythonPlayer::new(id as u8, format, action_receiver, observation_sender.clone(), result_sender))));
+            };
+            loop {
+                game.play();
+            }
+        });
+        MultiEnvironment {
+            players,
+            action_senders,
+            observation_receiver,
+            result_receivers,
+            game_thread,
+        }
+    }
+
+    fn start(&mut self, py: Python) -> PyResult<(u8, PyObject, PyObject, PyObject, PyObject)> {
+        Ok(MultiEnvironment::to_py_tuple(py, self.observation_receiver.recv().expect("Failed to read start observation")))
+    }
+
+    fn play(&mut self, py: Python, player: u8, action: u8) -> PyResult<(u8, PyObject, PyObject, PyObject, PyObject)> {
+        self.action_senders[player as usize].send(action).expect("Failed to send action");
+        self.game_thread.thread().unpark();
+        Ok(MultiEnvironment::to_py_tuple(py, self.observation_receiver.recv().expect("Failed to read play observation")))
+    }
+
+    fn result(&mut self, py: Python) -> PyResult<(PyObject, u8)> {
+        let mut winner = 0;
+        let mut vps = Array1::<u8>::zeros(self.players);
+        for player in 0..self.players {
+            let result = self.result_receivers[player].recv().expect("Failed to read results");
+            vps[player] = result.0;
+            if result.1 {
+                winner = player;
+            }
+        }
+        Ok((vps.into_pyarray(py).into_py(py), winner as u8))
     }
 }
 
 struct InternalPythonPlayer {
+    id: u8,
     player: PlayerId,
     observation_format: PyObservationFormat,
     action_receive: Receiver<u8>,
-    observation_send: Sender<Option<PyCatanObservation>>,
+    observation_send: Sender<Option<(u8, PyCatanObservation)>>,
     result_send: Sender<(u8,bool)>,
 }
 
 impl InternalPythonPlayer {
-    fn new(format: PyObservationFormat,
+    fn new(id: u8,
+        format: PyObservationFormat,
         action_receive: Receiver<u8>,
-        observation_send: Sender<Option<PyCatanObservation>>,
+        observation_send: Sender<Option<(u8, PyCatanObservation)>>,
         result_send: Sender<(u8,bool)>) -> InternalPythonPlayer {
         InternalPythonPlayer {
+            id,
             player: PlayerId::NONE,
             observation_format: format,
             action_receive,
             observation_send,
-            result_send,
+            result_send: result_send,
         }
     }
 }
@@ -103,7 +190,7 @@ impl PickerPlayerTrait for InternalPythonPlayer {
     }
 
     fn pick_action(&mut self, _phase: &Phase, state: &State, legal_actions: &Vec<bool>) -> u8 {
-        self.observation_send.send(Some(PyCatanObservation::new(self.observation_format, self.player, state, legal_actions))).expect("Failed sending observation");
+        self.observation_send.send(Some((self.id, PyCatanObservation::new(self.observation_format, self.player, state, legal_actions)))).expect("Failed sending observation");
         thread::park();
         self.action_receive.recv().expect("Failed receiving action")
     }
