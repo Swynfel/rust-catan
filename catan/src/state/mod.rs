@@ -90,7 +90,7 @@ pub trait StateTrait {
     }
 
     fn get_player_total_vp(&self, player: PlayerId) -> u8 {
-        self.get_player_public_vp(player) + self.get_player_hand(player).development_cards.victory_point
+        self.get_player_public_vp(player) + self.get_player_hand(player).development_cards.victory_point + self.get_player_hand(player).new_development_cards.victory_point
     }
 
     fn get_longest_road(&self) -> Option<(PlayerId, u8)>;

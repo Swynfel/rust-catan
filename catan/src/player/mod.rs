@@ -1,5 +1,6 @@
 mod picker_player;
 mod randomy;
+pub mod relative;
 
 use crate::utils::Empty;
 pub use picker_player::{ActionPickerPlayer, IndexPickerPlayer, PickerPlayerTrait};

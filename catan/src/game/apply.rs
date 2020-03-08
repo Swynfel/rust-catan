@@ -19,6 +19,11 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
         // ## Ending Turn
         //
         Action::EndTurn => {
+            let hand = state.get_player_hand_mut(player);
+            if hand.new_development_cards.total() > 0 {
+                hand.development_cards += hand.new_development_cards;
+                hand.new_development_cards.clear();
+            }
             *phase = Phase::Turn {
                 player: PlayerId::from((player.to_u8() + 1) % state.player_count()),
                 turn_phase: TurnPhase::PreRoll,
@@ -237,7 +242,7 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                 if picked < development[*dvp] {
                     // this development card was picked
                     development[*dvp] -= 1;
-                    state.get_player_hand_mut(player).development_cards[*dvp] += 1;
+                    state.get_player_hand_mut(player).new_development_cards[*dvp] += 1;
                     break;
                 } else {
                     picked -= development[*dvp];

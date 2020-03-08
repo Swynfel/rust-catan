@@ -14,13 +14,15 @@ pub trait PickerPlayerTrait {
     fn results(&mut self, state: &State, winner: PlayerId);
 }
 
-pub fn generate_possible_actions(possible_actions: &mut Vec<Action>, state: &State) {
+pub fn generate_possible_actions(possible_actions: &mut Vec<Action>, player: PlayerId, state: &State) {
     possible_actions.clear();
+    let player_count = state.player_count();
     // # BOARD
     // ## Hexes: MoveThief
     for hex in state.get_layout().hexes.iter() {
         for p in 0..state.player_count() {
-            let p = PlayerId::from(p);
+            let p = p + player.to_u8();
+            let p = if p >= player_count { PlayerId::from(p - player_count) } else { PlayerId::from(p) };
             possible_actions.push(Action::MoveThief { hex: *hex, victim: p });
         }
     }
@@ -59,12 +61,14 @@ pub fn generate_possible_actions(possible_actions: &mut Vec<Action>, state: &Sta
 }
 
 pub struct ActionPickerPlayer<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> {
+    position: PlayerId,
     possible_actions: Vec<Action>,
     action_length: usize,
     player: T,
 }
 
 pub struct IndexPickerPlayer<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> {
+    position: PlayerId,
     possible_actions: Vec<Action>,
     action_length: usize,
     player: T,
@@ -73,6 +77,7 @@ pub struct IndexPickerPlayer<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED =
 impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> ActionPickerPlayer<T> {
     pub fn new(player: T) -> ActionPickerPlayer<T> {
         ActionPickerPlayer {
+            position: PlayerId::NONE,
             possible_actions: Vec::new(),
             action_length: 0,
             player,
@@ -80,7 +85,7 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> ActionPicker
     }
 
     fn init_possible_actions(&mut self, state: &State) {
-        generate_possible_actions(&mut self.possible_actions, state);
+        generate_possible_actions(&mut self.possible_actions, self.position, state);
         self.action_length = self.possible_actions.len();
     }
 
@@ -100,6 +105,7 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> ActionPicker
 impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> IndexPickerPlayer<T> {
     pub fn new(player: T) -> IndexPickerPlayer<T> {
         IndexPickerPlayer {
+            position: PlayerId::NONE,
             possible_actions: Vec::new(),
             action_length: 0,
             player,
@@ -107,28 +113,7 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> IndexPickerPlayer<
     }
 
     fn init_possible_actions(&mut self, state: &State) {
-        self.possible_actions.clear();
-        // EndTurn
-        self.possible_actions.push(Action::EndTurn);
-        // BuildRoad
-        for path in state.get_layout().paths.iter() {
-            self.possible_actions.push(Action::BuildRoad { path: *path })
-        }
-        // BuildSettlement and BuildCity
-        for intersection in state.get_layout().intersections.iter() {
-            self.possible_actions.push(Action::BuildSettlement { intersection: *intersection });
-            self.possible_actions.push(Action::BuildCity { intersection: *intersection });
-        }
-        // TradeBank
-        for given in Resource::ALL.iter() {
-            for asked in Resource::ALL.iter() {
-                if given != asked {
-                    self.possible_actions.push(Action::TradeBank { given: *given , asked: *asked });
-                }
-            }
-        }
-        // BuyDevelopment
-        self.possible_actions.push(Action::BuyDevelopment);
+        generate_possible_actions(&mut self.possible_actions, self.position, state);
         self.action_length = self.possible_actions.len();
     }
 
@@ -145,6 +130,7 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> IndexPickerPlayer<
 
 impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> CatanPlayer for ActionPickerPlayer<T> {
     fn new_game(&mut self, position: PlayerId, state: &State) {
+        self.position = position;
         self.init_possible_actions(state);
         self.player.new_game(position, state, &self.possible_actions)
     }
@@ -169,6 +155,7 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> CatanPlayer 
 
 impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> CatanPlayer for IndexPickerPlayer<T> {
     fn new_game(&mut self, position: PlayerId, state: &State) {
+        self.position = position;
         self.init_possible_actions(state);
         self.player.new_game(position, state, &self.possible_actions);
     }
@@ -178,7 +165,7 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<bool>, PICKED = u8>> CatanPlayer for In
         loop {
             let action = self.player.pick_action(phase, state, &legal_actions) as usize;
             if action < self.possible_actions.len() {
-                return self.possible_actions[action as usize]
+                return self.possible_actions[action as usize];
             }
             self.player.bad_action(Error::ActionNotUnderstood)
         }

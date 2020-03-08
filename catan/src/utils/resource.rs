@@ -24,6 +24,14 @@ impl Resource {
         Resource::Grain,
         Resource::Wool,
     ];
+
+    pub fn to_u8(self) -> u8 {
+        self as u8
+    }
+
+    pub fn to_usize(self) -> usize {
+        self as usize
+    }
 }
 
 impl TryFrom<u8> for Resource {
@@ -178,6 +186,34 @@ impl IndexMut<Resource> for Resources {
             Resource::Ore => &mut self.ore,
             Resource::Grain => &mut self.grain,
             Resource::Wool => &mut self.wool,
+        }
+    }
+}
+
+impl Index<usize> for Resources {
+    type Output = i8;
+
+    fn index(&self, resource: usize) -> &i8 {
+        match resource {
+            0 => &self.brick,
+            1 => &self.lumber,
+            2 => &self.ore,
+            3 => &self.grain,
+            4 => &self.wool,
+            _ => panic!(),
+        }
+    }
+}
+
+impl IndexMut<usize> for Resources {
+    fn index_mut(&mut self, resource: usize) -> &mut i8 {
+        match resource {
+            0 => &mut self.brick,
+            1 => &mut self.lumber,
+            2 => &mut self.ore,
+            3 => &mut self.grain,
+            4 => &mut self.wool,
+            _ => panic!(),
         }
     }
 }

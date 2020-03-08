@@ -189,8 +189,8 @@ impl PickerPlayerTrait for InternalPythonPlayer {
         self.player = player;
     }
 
-    fn pick_action(&mut self, _phase: &Phase, state: &State, legal_actions: &Vec<bool>) -> u8 {
-        self.observation_send.send(Some((self.id, PyCatanObservation::new(self.observation_format, self.player, state, legal_actions)))).expect("Failed sending observation");
+    fn pick_action(&mut self, phase: &Phase, state: &State, legal_actions: &Vec<bool>) -> u8 {
+        self.observation_send.send(Some((self.id, PyCatanObservation::new(self.observation_format, self.player, state, phase, legal_actions)))).expect("Failed sending observation");
         thread::park();
         self.action_receive.recv().expect("Failed receiving action")
     }

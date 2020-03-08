@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut};
+use std::ops::{Index, IndexMut, AddAssign};
 
 /******* DevelopmentCard *******/
 
@@ -24,6 +24,10 @@ impl DevelopmentCard {
 
     pub fn to_u8(self) -> u8 {
         self as u8
+    }
+
+    pub fn to_usize(self) -> usize {
+        self as usize
     }
 }
 
@@ -52,6 +56,14 @@ impl DevelopmentCards {
     pub fn total(&self) -> u8 {
         self.knight + self.road_building + self.year_of_plenty + self.monopole + self.victory_point
     }
+
+    pub fn clear(&mut self) {
+        self.knight=0;
+        self.road_building=0;
+        self.year_of_plenty=0;
+        self.monopole=0;
+        self.victory_point=0;
+    }
 }
 
 impl Index<DevelopmentCard> for DevelopmentCards {
@@ -77,5 +89,15 @@ impl IndexMut<DevelopmentCard> for DevelopmentCards {
             DevelopmentCard::Monopole => &mut self.monopole,
             DevelopmentCard::VictoryPoint => &mut self.victory_point,
         }
+    }
+}
+
+impl AddAssign for DevelopmentCards {
+    fn add_assign(&mut self, other: DevelopmentCards) {
+        self.knight += other.knight;
+        self.road_building += other.road_building;
+        self.year_of_plenty += other.year_of_plenty;
+        self.monopole += other.monopole;
+        self.victory_point += other.victory_point;
     }
 }

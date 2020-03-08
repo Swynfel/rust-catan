@@ -3,7 +3,9 @@ use pyo3::prelude::*;
 use numpy::{IntoPyArray, PyArrayDyn};
 
 use catan::state::{State, PlayerId};
-use catan::utils::{Hex, LandHex, Harbor, Resource, Coord};
+use catan::utils::{Hex, LandHex, Harbor, Resource, Coord, DevelopmentCard};
+use catan::game::{Phase, TurnPhase, DevelopmentPhase};
+use catan::player::relative;
 
 #[pymodule]
 fn rust_ext(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -51,6 +53,7 @@ fn jsettlers_u(resource: Resource) -> usize {
     }
 }
 
+#[allow(dead_code)]
 fn jsettlers_resource(value: usize) -> Resource {
     match value {
         0 => Resource::Brick,
@@ -103,31 +106,12 @@ pub(crate) struct PyCatanObservation {
 }
 
 impl PyCatanObservation {
-    pub(crate) fn new(format: PyObservationFormat, player: PlayerId, state: &State, legal_actions: &Vec<bool>) -> PyCatanObservation {
-        // flat
-        let mut flat = Array1::<i32>::zeros(11);
-        let hand = &state.get_player_hand(player);
-        for i in 0..Resource::COUNT {
-            flat[i] = hand.resources[jsettlers_resource(i)].into();
-        }
-        flat[5] = state.get_player_total_vp(player).into();
-        flat[6] = state.get_development_cards().total().into();
-        flat[7] = hand.road_pieces.into();
-        flat[8] = hand.settlement_pieces.into();
-        flat[9] = hand.city_pieces.into();
-        flat[10] = match state.get_longest_road() {
-            None => 0,
-            Some((player_id, _)) => {
-                if player_id == player {
-                    1
-                } else {
-                    -1
-                }
-            }
-        };
-        // board
+    pub(crate) fn new(format: PyObservationFormat, player: PlayerId, state: &State, phase: &Phase, legal_actions: &Vec<bool>) -> PyCatanObservation {
+        let player_count = state.player_count();
+        // # BOARD
         let mut board = Array3::<i32>::zeros((format.width,format.height,9));
         let layout = state.get_layout();
+        // ## Hexes [0,7[
         for coord in layout.hexes.iter() {
             let hex = state.get_static_hex(*coord).unwrap();
             if let Hex::Land(hex) = hex {
@@ -136,30 +120,101 @@ impl PyCatanObservation {
                     LandHex::Desert => { board[(x, y, 5)] = 1; },
                     LandHex::Prod(res, num) => { board[(x, y, jsettlers_u(res))] = num.into(); },
                 }
+                if *coord == state.get_thief_hex() {
+                    board[(x, y, 6)] = 1;
+                }
             }
         };
+        // ## Paths [7,7+player_count[
+        let c = 7;
         for coord in layout.paths.iter() {
             let path = state.get_dynamic_path(*coord).unwrap();
             if let Some(p) = path {
+                let p = relative::player_id_to_relative(player, p, player_count);
                 let (x,y) = format.map(*coord);
-                board[(x, y, 6)] = if player == p { 1 } else { -1 };
+                board[(x, y, c + p.to_usize())] = 1;
             }
         };
+        let c_harbor = 7 + player_count as usize;
+        let c_buildings = c_harbor + 6;
+        // ## Intersections [7+player_count, 13+2×player_count[
         for coord in layout.intersections.iter() {
             let (x,y) = format.map(*coord);
             let harbor = state.get_static_harbor(*coord).unwrap();
             match harbor {
-                Harbor::Generic => { board[(x, y, 7)] = 5; }
-                Harbor::Special(res) => { board[(x, y, 7)] = jsettlers_u(res) as i32; }
+                Harbor::Generic => { board[(x, y, c + 5)] = 1; }
+                Harbor::Special(res) => { board[(x, y, c + jsettlers_u(res))] = 1; }
                 _ => (),
             }
             let intersection = state.get_dynamic_intersection(*coord).unwrap();
             if let Some((p, is_city)) = intersection {
-                let v = if is_city { 2 } else { 1 };
-                board[(x, y, 8)] = if player == p { v } else { -v };
+                let p = relative::player_id_to_relative(player, p, player_count);
+                board[(x, y, c_buildings + p.to_usize())] = if is_city { 2 } else { 1 };
             }
         };
-        // result
+
+        // # FLAT
+        let mut flat = Array1::<i32>::zeros(29+(player_count as usize)*8);
+        let longest_road = match state.get_longest_road() {
+            None => PlayerId::NONE,
+            Some((player_id, _)) => player_id,
+        };
+        let largest_army = match state.get_largest_army() {
+            None => PlayerId::NONE,
+            Some((player_id, _)) => player_id,
+        };
+        // ## Player 27
+        let hand = &state.get_player_hand(player);
+        for res in 0..Resource::COUNT {
+            flat[res] = hand.resources[res].into();
+        }
+        flat[5] = hand.road_pieces.into();
+        flat[6] = hand.settlement_pieces.into();
+        flat[7] = hand.city_pieces.into();
+        flat[8] = hand.knights.into();
+        for d in DevelopmentCard::ALL.iter() {
+            flat[9+d.to_usize()] = hand.development_cards[*d].into();
+        }
+        for d in DevelopmentCard::ALL.iter() {
+            flat[14+d.to_usize()] = hand.new_development_cards[*d].into();
+        }
+        for h in 0..6 {
+            flat[19+h] = if hand.harbor[h] { 1 } else { 0 };
+        }
+        flat[25] = if longest_road == player { 1 } else { 0 };
+        flat[26] = if largest_army == player { 1 } else { 0 };
+        //flat[] = state.get_player_total_vp(player).into();
+        // ## Opponents (p-1)*8
+        for opp in 1..player_count {
+            let c_player = 19+(opp as usize)*8;
+            let player = relative::offset_to_player_id(player, opp, player_count);
+            let hand = &state.get_player_hand(player);
+            flat[c_player] = hand.resources.total().into();
+            flat[c_player+1] = hand.road_pieces.into();
+            flat[c_player+2] = hand.settlement_pieces.into();
+            flat[c_player+3] = hand.city_pieces.into();
+            flat[c_player+4] = hand.knights.into();
+            flat[c_player+5] = hand.development_cards.total().into();
+            flat[c_player+6] = if longest_road == player { 1 } else { 0 };
+            flat[c_player+7] = if largest_army == player { 1 } else { 0 };
+        }
+        // ## State 6
+        let c_state = 19+(player_count as usize)*8;
+        let bank_resources = state.get_bank_resources();
+        for res in 0..Resource::COUNT {
+            flat[c_state + res] = bank_resources[res].into();
+        }
+        flat[c_state+5] = state.get_development_cards().total().into();
+        // ## Phase 4
+        let c_phase = c_state + 6;
+        if let Phase::Turn { player: _, turn_phase, development_phase } = phase {
+            flat[c_phase] = if let TurnPhase::PreRoll = turn_phase { 1 } else { 0 };
+            flat[c_phase+1] = if let DevelopmentPhase::Ready = development_phase { 1 } else { 0 };
+            flat[c_phase+2] = if let DevelopmentPhase::RoadBuildingActive { two_left } = development_phase { if *two_left { 2 } else { 1 } } else { 0 };
+            flat[c_phase+3] = if let DevelopmentPhase::YearOfPlentyActive { two_left } = development_phase { if *two_left { 2 } else { 1 } } else { 0 };
+        }
+
+        // # RESULT
         PyCatanObservation {
             actions: legal_actions.iter().map(|value| *value).collect(),
             board,

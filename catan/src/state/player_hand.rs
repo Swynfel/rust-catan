@@ -16,6 +16,7 @@ pub struct PlayerHand {
     pub knights: u8,
     pub continous_road: u8,
     pub development_cards: DevelopmentCards,
+    pub new_development_cards: DevelopmentCards,
     pub harbor: AccessibleHarbor,
 }
 
@@ -59,6 +60,20 @@ impl IndexMut<Harbor> for AccessibleHarbor {
     }
 }
 
+impl Index<usize> for AccessibleHarbor {
+    type Output = bool;
+
+    fn index(&self, index: usize) -> &bool {
+         &self.harbors[index]
+    }
+}
+
+impl IndexMut<usize> for AccessibleHarbor {
+    fn index_mut(&mut self, index: usize) -> &mut bool {
+         &mut self.harbors[index]
+    }
+}
+
 impl PlayerHand {
     pub(super) fn new() -> PlayerHand {
         PlayerHand {
@@ -70,6 +85,7 @@ impl PlayerHand {
             knights: 0,
             continous_road: 0,
             development_cards: DevelopmentCards::new(),
+            new_development_cards: DevelopmentCards::new(),
             harbor: AccessibleHarbor::new(),
         }
     }
