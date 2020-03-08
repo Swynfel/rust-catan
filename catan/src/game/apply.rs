@@ -4,7 +4,7 @@ use crate::state::{State, PlayerId};
 use crate::utils::{Resource, Resources, Hex, LandHex, DevelopmentCard};
 use crate::board::utils::topology::Topology;
 
-use super::{Action, Phase, TurnPhase, Notification};
+use super::{Action, Phase, TurnPhase, DevelopmentPhase, Notification};
 
 /// Applies a legal action
 ///
@@ -19,15 +19,19 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
         // ## Ending Turn
         //
         Action::EndTurn => {
-            *phase = Phase::Turn(PlayerId::from((player.to_u8() + 1) % state.player_count()), TurnPhase::PreRoll, false);
+            *phase = Phase::Turn {
+                player: PlayerId::from((player.to_u8() + 1) % state.player_count()),
+                turn_phase: TurnPhase::PreRoll,
+                development_phase: DevelopmentPhase::Ready,
+            };
         }
         //
-        // ## Rolling Dice (Should be done automatically for now)
+        // ## Rolling Dice
         //
         Action::RollDice => {
             let roll = rng.gen_range(1, 7) + rng.gen_range(1, 7);
             if roll == 7 {
-                // TODO: Handle thief
+                // TODO: Discard cards
                 for p in 0..state.player_count() {
                     let player = PlayerId::from(p);
                     let player_resources = state.get_player_hand(player).resources;
@@ -39,8 +43,8 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                         }
                     }
                 }
-                if let Phase::Turn(_, turn_phase, _) = phase {
-                    *turn_phase = TurnPhase::Free;
+                if let Phase::Turn { player: _, turn_phase, development_phase: _ } = phase {
+                    *turn_phase = TurnPhase::MoveThief;
                 }
                 return Some(Notification::ThiefRolled);
             } else {
@@ -92,10 +96,40 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                 for (i,resources) in received_resources.iter().enumerate() {
                     state.get_player_hand_mut(PlayerId::from(i as u8)).resources += *resources;
                 }
-                if let Phase::Turn(_, turn_phase, _) = phase {
+                if let Phase::Turn { player: _, turn_phase, development_phase: _ } = phase {
                     *turn_phase = TurnPhase::Free;
                 }
                 return Some(Notification::ResourcesRolled { roll, resources: received_resources });
+            }
+        }
+        //
+        // ## Move Thief
+        //
+        Action::MoveThief { hex, victim } => {
+            state.set_thief_hex(hex);
+            if victim != player && victim != PlayerId::NONE {
+                if state.get_player_hand(victim).resources.total() > 0 {
+                    let mut resources = state.get_player_hand_mut(victim).resources;
+                    let mut picked = rng.gen_range(0, resources.total());
+                    for res in Resource::ALL.iter() {
+                        if picked < resources[*res] {
+                            resources[*res] -= 1;
+                            state.get_player_hand_mut(player).resources[*res] += 1;
+                            break;
+                        } else {
+                            picked -= resources[*res];
+                        }
+                    }
+                }
+            }
+            if let Phase::Turn { player: _, turn_phase, development_phase } = phase {
+                // If moved thief because of 7 roll
+                if *turn_phase == TurnPhase::MoveThief {
+                    *turn_phase = TurnPhase::Free;
+                // Else moved thief because of knight development card
+                } else {
+                    *development_phase = DevelopmentPhase::DevelopmentPlayed;
+                }
             }
         }
         //
@@ -104,10 +138,26 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
         Action::BuildRoad { path } => {
             state.get_player_hand_mut(player).road_pieces -= 1;
             state.set_dynamic_path(path, player).expect(ERROR_MESSAGE);
-            if phase.is_turn() {
-                state.get_player_hand_mut(player).resources -= Resources::ROAD;
-                *state.get_bank_resources_mut() += Resources::ROAD;
+
+            if let Phase::Turn {
+                player:_,
+                turn_phase: _,
+                development_phase
+            } = phase {
+                // Spend free roads from Road Building Development Card
+                if let DevelopmentPhase::RoadBuildingActive { two_left } = development_phase {
+                    if *two_left {
+                        *two_left = false;
+                    } else {
+                        *development_phase = DevelopmentPhase::DevelopmentPlayed;
+                    }
+                // Or spend resources
+                } else {
+                    state.get_player_hand_mut(player).resources -= Resources::ROAD;
+                    *state.get_bank_resources_mut() += Resources::ROAD;
+                };
             }
+
             state.update_longest_road(player, path);
         }
         //
@@ -123,7 +173,7 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
             if phase.is_turn() {
                 hand.resources -= Resources::SETTLEMENT;
                 *state.get_bank_resources_mut() += Resources::SETTLEMENT;
-            } else if *phase == Phase::InitialPlacement(player, true, false) {
+            } else if *phase == (Phase::InitialPlacement { player, placing_second: true, placing_road: false }) {
                 // Gives surrounding resources when placing the second settlement of the initial phase
                 for hex in state.intersection_hex_neighbours(intersection).expect(ERROR_MESSAGE) {
                     if let Hex::Land(LandHex::Prod(res, _)) = state.get_static_hex(hex).expect(ERROR_MESSAGE) {
@@ -151,6 +201,9 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                 }
             }
         }
+        //
+        // ## Building City
+        //
         Action::BuildCity { intersection } => {
             state.set_dynamic_intersection(intersection, player, true).expect(ERROR_MESSAGE);
             *state.get_bank_resources_mut() += Resources::CITY;
@@ -160,7 +213,9 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
             hand.city_pieces -= 1;
             hand.building_vp += 1;
         }
-
+        //
+        // ## Trade Bank
+        //
         Action::TradeBank { given, asked } => {
             let hand = state.get_player_hand_mut(player);
             let given_count = hand.harbor.rate(given) as i8;
@@ -170,7 +225,9 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
             bank[given] += given_count;
             bank[asked] -= 1;
         }
-
+        //
+        // ## Buy Development Card
+        //
         Action::BuyDevelopment => {
             state.get_player_hand_mut(player).resources -= Resources::DVP_CARD;
             *state.get_bank_resources_mut() += Resources::DVP_CARD;
@@ -187,10 +244,70 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                 }
             }
         }
+        //
+        // ## Use Knight Development Card
+        //
+        Action::DevelopmentKnight => {
+            state.get_player_hand_mut(player).development_cards.knight -= 1;
+            if let Phase::Turn { player: _, turn_phase: _, development_phase } = phase {
+                *development_phase = DevelopmentPhase::KnightActive;
+            }
+        }
+        //
+        // ## Use Road Building Development Card
+        //
+        Action::DevelopmentRoadBuilding => {
+            state.get_player_hand_mut(player).development_cards.road_building -= 1;
+            if let Phase::Turn { player: _, turn_phase: _, development_phase } = phase {
+                *development_phase = DevelopmentPhase::RoadBuildingActive { two_left: true };
+            }
+        }
+        //
+        // ## Use Year of Plenty Development Card
+        //
+        Action::DevelopmentYearOfPlenty => {
+            state.get_player_hand_mut(player).development_cards.year_of_plenty -= 1;
+            if let Phase::Turn { player: _, turn_phase: _, development_phase } = phase {
+                *development_phase = DevelopmentPhase::YearOfPlentyActive { two_left: true };
+            }
+        }
+        Action::ChooseFreeResource { resource } => {
+            state.get_bank_resources_mut()[resource] -= 1;
+            state.get_player_hand_mut(player).resources[resource] += 1;
+            if let Phase::Turn { player: _, turn_phase: _, development_phase } = phase {
+                if let DevelopmentPhase::YearOfPlentyActive { two_left } = development_phase {
+                    if *two_left {
+                        *two_left = false;
+                    } else {
+                        *development_phase = DevelopmentPhase::DevelopmentPlayed;
+                    }
+                }
+            }
+        }
+        //
+        // ## Use Year of Plenty Development Card
+        //
+        Action::DevelopmentMonopole { resource } => {
+            state.get_player_hand_mut(player).development_cards.monopole -= 1;
+
+            let mut total_taken = 0;
+            for p in 0..state.player_count() {
+                let p = PlayerId::from(p);
+                if p != player {
+                    total_taken += state.get_player_hand(p).resources[resource];
+                    state.get_player_hand_mut(p).resources[resource] = 0;
+                }
+            }
+            state.get_player_hand_mut(player).resources[resource] += total_taken;
+
+            if let Phase::Turn { player: _, turn_phase: _, development_phase } = phase {
+                *development_phase = DevelopmentPhase::DevelopmentPlayed;
+            }
+        }
         _ => unimplemented!(),
     }
     // Special phase change if initial placement
-    if let Phase::InitialPlacement(player, placing_second, placing_road) = phase {
+    if let Phase::InitialPlacement { player, placing_second, placing_road } = phase {
         if !*placing_road {
             *placing_road = true
         } else {
@@ -222,7 +339,7 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
         for p in 0..state.player_count() {
             let player = PlayerId::from(p);
             if state.get_player_total_vp(player) >= 10 {
-                *phase = Phase::FinishedGame(player);
+                *phase = Phase::FinishedGame { winner: player };
             }
         }
     }

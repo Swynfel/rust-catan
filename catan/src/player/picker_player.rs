@@ -14,6 +14,50 @@ pub trait PickerPlayerTrait {
     fn results(&mut self, state: &State, winner: PlayerId);
 }
 
+pub fn generate_possible_actions(possible_actions: &mut Vec<Action>, state: &State) {
+    possible_actions.clear();
+    // # BOARD
+    // ## Hexes: MoveThief
+    for hex in state.get_layout().hexes.iter() {
+        for p in 0..state.player_count() {
+            let p = PlayerId::from(p);
+            possible_actions.push(Action::MoveThief { hex: *hex, victim: p });
+        }
+    }
+    // ## Paths: BuildRoad
+    for path in state.get_layout().paths.iter() {
+        possible_actions.push(Action::BuildRoad { path: *path });
+    }
+    // ## Intersections: BuildSettlement and BuildCity
+    for intersection in state.get_layout().intersections.iter() {
+        possible_actions.push(Action::BuildSettlement { intersection: *intersection });
+        possible_actions.push(Action::BuildCity { intersection: *intersection });
+    }
+    // # FLAT
+    // ## TurnPhase
+    possible_actions.push(Action::RollDice);
+    possible_actions.push(Action::EndTurn);
+    // ## Trade
+    for given in Resource::ALL.iter() {
+        for asked in Resource::ALL.iter() {
+            if given != asked {
+                possible_actions.push(Action::TradeBank { given: *given , asked: *asked });
+            }
+        }
+    }
+    // ## Development
+    possible_actions.push(Action::BuyDevelopment);
+    possible_actions.push(Action::DevelopmentKnight);
+    possible_actions.push(Action::DevelopmentRoadBuilding);
+    possible_actions.push(Action::DevelopmentYearOfPlenty);
+    for resource in Resource::ALL.iter() {
+        possible_actions.push(Action::ChooseFreeResource { resource: *resource });
+    }
+    for resource in Resource::ALL.iter() {
+        possible_actions.push(Action::DevelopmentMonopole { resource: *resource });
+    }
+}
+
 pub struct ActionPickerPlayer<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> {
     possible_actions: Vec<Action>,
     action_length: usize,
@@ -36,28 +80,7 @@ impl<T : PickerPlayerTrait<ACTIONS = Vec<Action>, PICKED = Action>> ActionPicker
     }
 
     fn init_possible_actions(&mut self, state: &State) {
-        self.possible_actions.clear();
-        // EndTurn
-        self.possible_actions.push(Action::EndTurn);
-        // BuildRoad
-        for path in state.get_layout().paths.iter() {
-            self.possible_actions.push(Action::BuildRoad { path: *path });
-        }
-        // BuildSettlement and BuildCity
-        for intersection in state.get_layout().intersections.iter() {
-            self.possible_actions.push(Action::BuildSettlement { intersection: *intersection });
-            self.possible_actions.push(Action::BuildCity { intersection: *intersection });
-        }
-        // TradeBank
-        for given in Resource::ALL.iter() {
-            for asked in Resource::ALL.iter() {
-                if given != asked {
-                    self.possible_actions.push(Action::TradeBank { given: *given , asked: *asked });
-                }
-            }
-        }
-        // BuyDevelopment
-        self.possible_actions.push(Action::BuyDevelopment);
+        generate_possible_actions(&mut self.possible_actions, state);
         self.action_length = self.possible_actions.len();
     }
 

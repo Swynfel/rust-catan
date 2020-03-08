@@ -7,7 +7,7 @@ pub mod legal;
 
 pub use error::Error;
 pub use action::{Action, ActionCategory};
-pub use phase::{Phase, TurnPhase};
+pub use phase::{Phase, TurnPhase, DevelopmentPhase};
 pub use notification::Notification;
 
 // --------------------------------------------------------------------------------------------- //
@@ -58,13 +58,13 @@ impl Game {
         }
         loop {
             // If new turn, roll dice automatically
-            if let Phase::Turn(_, TurnPhase::PreRoll, _) = phase {
+            if let Phase::Turn { player: _, turn_phase: TurnPhase::PreRoll, development_phase: _ } = phase {
                 if let Some(notification) = apply(&mut phase, &mut state, Action::RollDice, &mut rng) {
                     self.notify_all(notification);
                 }
             }
             // If the game is finished, exit
-            else if let Phase::FinishedGame(winner) = phase {
+            else if let Phase::FinishedGame { winner } = phase {
                 for player in players_order.iter() {
                     self.players[*player].results(&state, winner);
                 }

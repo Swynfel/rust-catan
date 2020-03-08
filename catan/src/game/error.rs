@@ -1,6 +1,6 @@
 use super::action::Action;
 use crate::board::Error as BoardError;
-use crate::utils::{Resource, Resources};
+use crate::utils::{Coord, Resource, Resources, PlayerId, DevelopmentCard};
 
 #[derive(Copy, Clone, Debug)]
 pub enum Error {
@@ -14,6 +14,26 @@ pub enum Error {
         have: Resources,
     },
     NoMoreResourceInBank(Resource),
+    NoMorePiece {
+        piece: u8, // Road: 0, Settlement: 1, City: 2
+    },
+    NotConnected {
+        coord: Coord,
+    },
+    AlreadyOccupied {
+        coord: Coord,
+    },
+    WrongVictim {
+        victim: PlayerId,
+    },
+    MustPickVictim,
+    DevelopmentCardAlreadyPlayed,
+    NoCard {
+        card_type: DevelopmentCard
+    },
+    ThiefNotMoved {
+        hex: Coord,
+    }
 }
 
 impl From<BoardError> for Error {

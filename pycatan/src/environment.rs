@@ -202,7 +202,9 @@ impl PickerPlayerTrait for InternalPythonPlayer {
     fn notify(&mut self, _notification: &Notification) {}
 
     fn results(&mut self, state: &State, winner: PlayerId) {
-        self.observation_send.send(None).expect("Failed sending game finished");
+        if self.id==0 {
+            self.observation_send.send(None).expect("Failed sending game finished");
+        }
         self.result_send.send((state.get_player_total_vp(self.player), self.player == winner)).expect("Failed sending game results");
     }
 }

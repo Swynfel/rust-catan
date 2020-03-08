@@ -4,6 +4,7 @@ mod resource;
 pub use development_card::{DevelopmentCard, DevelopmentCards};
 pub use resource::{Resource, Resources};
 pub use crate::board::{Coord, CoordType};
+pub use crate::state::PlayerId;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Empty;
