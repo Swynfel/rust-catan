@@ -254,9 +254,11 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
         //
         Action::DevelopmentKnight => {
             state.get_player_hand_mut(player).development_cards.knight -= 1;
+            state.get_player_hand_mut(player).knights += 1;
             if let Phase::Turn { player: _, turn_phase: _, development_phase } = phase {
                 *development_phase = DevelopmentPhase::KnightActive;
             }
+            state.update_largest_army(player);
         }
         //
         // ## Use Road Building Development Card

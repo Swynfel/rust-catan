@@ -60,14 +60,8 @@ impl Game {
             self.players[*player].new_game(PlayerId::from(i), &state);
         }
         loop {
-            // If new turn, roll dice automatically
-            if let Phase::Turn { player: _, turn_phase: TurnPhase::PreRoll, development_phase: _ } = phase {
-                if let Some(notification) = apply(&mut phase, state, Action::RollDice, rng) {
-                    self.notify_all(notification);
-                }
-            }
             // If the game is finished, exit
-            else if let Phase::FinishedGame { winner } = phase {
+            if let Phase::FinishedGame { winner } = phase {
                 for player in players_order.iter() {
                     self.players[*player].results(&state, winner);
                 }
