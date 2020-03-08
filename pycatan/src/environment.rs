@@ -3,13 +3,18 @@ use pyo3::prelude::*;
 use numpy::convert::IntoPyArray;
 use std::thread;
 use std::sync::mpsc::{channel, Sender, Receiver};
+use rand::SeedableRng;
+use rand::rngs::SmallRng;
+use rand::seq::SliceRandom;
 
 use catan::game::Game;
 use catan::player::{IndexPickerPlayer, PickerPlayerTrait};
 use catan::player::Randomy;
 use catan::game::{Phase, Action, Error, Notification};
 use catan::state::{State, PlayerId};
-use super::{PyCatanObservation, PyObservationFormat};
+use catan::board::setup::random_default_setup_existing_state;
+use catan::board::layout;
+use super::{PyCatanObservation, PyObservationFormat, PythonState};
 
 #[pyclass]
 pub struct SingleEnvironment {
@@ -46,7 +51,7 @@ impl SingleEnvironment {
             };
             game.add_player(Box::new(IndexPickerPlayer::new(InternalPythonPlayer::new(0, format, action_receiver, observation_sender, result_sender))));
             loop {
-                game.play();
+                game.setup_and_play();
             }
         });
         SingleEnvironment {
@@ -118,8 +123,14 @@ impl MultiEnvironment {
                 game.add_player(Box::new(IndexPickerPlayer::new(
                     InternalPythonPlayer::new(id as u8, format, action_receiver, observation_sender.clone(), result_sender))));
             };
+            let mut rng = SmallRng::from_entropy();
             loop {
-                game.play();
+                let mut state = PythonState::new(&layout::DEFAULT, players as u8, format);
+                random_default_setup_existing_state::<PythonState, SmallRng>(&mut rng, &mut state);
+                let mut players_order: Vec<usize> = (0..players).collect();
+                players_order.shuffle(&mut rng);
+                let mut state: State = Box::new(state);
+                game.play(&mut rng, &mut state, players_order);
             }
         });
         MultiEnvironment {
@@ -165,7 +176,7 @@ struct InternalPythonPlayer {
 }
 
 impl InternalPythonPlayer {
-    fn new(id: u8,
+    fn new<'a>(id: u8,
         format: PyObservationFormat,
         action_receive: Receiver<u8>,
         observation_send: Sender<Option<(u8, PyCatanObservation)>>,
@@ -190,7 +201,15 @@ impl PickerPlayerTrait for InternalPythonPlayer {
     }
 
     fn pick_action(&mut self, phase: &Phase, state: &State, legal_actions: &Vec<bool>) -> u8 {
-        self.observation_send.send(Some((self.id, PyCatanObservation::new(self.observation_format, self.player, state, phase, legal_actions)))).expect("Failed sending observation");
+        self.observation_send.send(
+            Some((
+                self.id,
+                match state.as_any().downcast_ref::<PythonState>() {
+                    Some(python_state) => PyCatanObservation::new_python(self.player, python_state, state, phase, legal_actions),
+                    None => PyCatanObservation::new(self.observation_format, self.player, state, phase, legal_actions),
+                }
+            ))
+        ).expect("Failed sending observation");
         thread::park();
         self.action_receive.recv().expect("Failed receiving action")
     }

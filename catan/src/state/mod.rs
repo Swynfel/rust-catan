@@ -9,6 +9,8 @@ pub use tricell_state::TricellState;
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct PlayerId(u8);
 
+use std::any::Any;
+
 use crate::utils::{Hex, Harbor, Coord, DevelopmentCards, Resources};
 use crate::board::{Layout, Error};
 
@@ -129,4 +131,6 @@ pub trait StateTrait {
     fn set_dynamic_intersection(&mut self, coord: Coord, player: PlayerId, is_city: bool) -> Result<(), Error>;
 
     fn get_dynamic_intersection(&self, coord: Coord) -> Result<Option<(PlayerId, bool)>, Error>;
+
+    fn as_any(&self) -> &dyn Any;
 }

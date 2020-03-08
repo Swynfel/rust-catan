@@ -75,7 +75,7 @@ impl IndexMut<usize> for AccessibleHarbor {
 }
 
 impl PlayerHand {
-    pub(super) fn new() -> PlayerHand {
+    pub fn new() -> PlayerHand {
         PlayerHand {
             resources: Resources::ZERO,
             road_pieces: 15,

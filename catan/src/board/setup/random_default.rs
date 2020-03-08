@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 use rand::rngs::ThreadRng;
 
 use super::c;
-use crate::state::{State, StateMaker};
+use crate::state::{State, StateMaker, StateTrait};
 use crate::board::layout;
 use crate::board::utils::{Coord, CoordTransform};
 use crate::board::utils::topology::Topology;
@@ -97,4 +97,44 @@ pub fn random_default_setup<T : StateMaker, R : Rng>(rng: &mut R, player_count: 
     // development cards
     *state.get_development_cards_mut() = DVP_CARDS;
     state
+}
+
+pub fn random_default_setup_existing_state<S : StateTrait, R : Rng>(rng: &mut R, state: &mut S) {
+    // hexes
+    let mut landtiles = LAND_TILES;
+    landtiles.shuffle(rng);
+    let transform = CoordTransform::random(Coord::ZERO, rng);
+    let coord_landtile_pairs = NUM_TRACK.iter()
+        .map(|&coord| transform.transform(coord))
+        .zip(landtiles.iter());
+    let mut i: usize = 0;
+    for (coord, landtile) in coord_landtile_pairs {
+        state.set_static_hex(coord, match landtile {
+            Some(res) => {
+                let num_token = NUM_TOKENS[i];
+                i += 1;
+                Hex::Land(LandHex::Prod(*res, num_token))
+            }
+            None => Hex::Land(LandHex::Desert)
+        }).expect("Failed setting hexes");
+    }
+    // ports
+    let mut porttiles = PORT_TILES;
+    porttiles.shuffle(rng);
+    let transform = CoordTransform::new(
+        Coord::ZERO,
+        if rng.gen() {0} else {3},
+        false
+    );
+    let coord_porttile_pairs = PORT_PATHS.iter()
+        .map(|&coord| transform.transform(coord))
+        .zip(porttiles.iter());
+    for (path_coord, &porttile) in coord_porttile_pairs {
+        for intersection_coord in state.path_intersection_neighbours(path_coord).expect("Wrong path").iter() {
+            state.set_static_harbor(*intersection_coord, porttile)
+            .expect("Failed setting harbor");
+        }
+    };
+    // development cards
+    *state.get_development_cards_mut() = DVP_CARDS;
 }

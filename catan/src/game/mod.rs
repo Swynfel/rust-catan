@@ -16,7 +16,7 @@ use rand::SeedableRng;
 use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
 
-use crate::state::TricellState;
+use crate::state::{State, TricellState};
 use crate::board::setup;
 use crate::state::PlayerId;
 use crate::player::CatanPlayer;
@@ -44,13 +44,16 @@ impl Game {
         }
     }
 
-    pub fn play(&mut self) -> Notification {
+    pub fn setup_and_play(&mut self) -> Notification {
         let player_count = self.players.len();
         let mut rng = SmallRng::from_entropy();
         let mut state = setup::random_default::<TricellState, SmallRng>(&mut rng, player_count as u8);
         let mut players_order: Vec<usize> = (0..player_count).collect();
         players_order.shuffle(&mut rng);
+        self.play(&mut rng, &mut state, players_order)
+    }
 
+    pub fn play(&mut self, rng: &mut SmallRng, state: &mut State, players_order: Vec<usize>) -> Notification {
         let mut phase = Phase::START_GAME;
 
         for (i, player) in players_order.iter().enumerate() {
@@ -59,7 +62,7 @@ impl Game {
         loop {
             // If new turn, roll dice automatically
             if let Phase::Turn { player: _, turn_phase: TurnPhase::PreRoll, development_phase: _ } = phase {
-                if let Some(notification) = apply(&mut phase, &mut state, Action::RollDice, &mut rng) {
+                if let Some(notification) = apply(&mut phase, state, Action::RollDice, rng) {
                     self.notify_all(notification);
                 }
             }
@@ -94,7 +97,7 @@ impl Game {
             // Notifies every player of action played
             self.notify_all(Notification::ActionPlayed { by: phase.player(), action });
             // Applies action
-            apply(&mut phase, &mut state, action, &mut rng);
+            apply(&mut phase, state, action, rng);
         }
     }
 }

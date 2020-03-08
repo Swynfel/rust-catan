@@ -9,6 +9,6 @@ fn play_random_game() {
    game.add_player(Box::new(Randomy::new_player()));
    game.add_player(Box::new(Randomy::new_player()));
    game.add_player(Box::new(Randomy::new_player()));
-   let notif = game.play();
+   let notif = game.setup_and_play();
    assert_ne!(notif, Notification::GameFinished{ winner: PlayerId::NONE });
 }

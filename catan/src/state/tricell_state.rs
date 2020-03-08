@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use crate::board::map::TricellMap;
 use crate::board::{Layout, Error};
 use crate::utils::{Empty, Hex, Harbor, Coord, DevelopmentCards, Resources};
@@ -276,5 +278,9 @@ impl StateTrait for TricellState {
         } else {
             Ok(None)
         }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }

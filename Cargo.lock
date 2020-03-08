@@ -297,6 +297,7 @@ dependencies = [
  "ndarray",
  "numpy",
  "pyo3",
+ "rand",
 ]
 
 [[package]]

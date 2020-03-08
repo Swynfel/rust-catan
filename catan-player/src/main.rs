@@ -15,7 +15,7 @@ fn main() {
     let mut game = Game::new();
     game.add_player(Box::new(TerminalPlayer::new()));
     game.add_player(Box::new(Randomy::new_player()));
-    game.play();
+    game.setup_and_play();
 
     println!("[END]");
 }

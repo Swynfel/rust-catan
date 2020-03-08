@@ -7,6 +7,8 @@ use catan::utils::{Hex, LandHex, Harbor, Resource, Coord, DevelopmentCard};
 use catan::game::{Phase, TurnPhase, DevelopmentPhase};
 use catan::player::relative;
 
+use super::PythonState;
+
 #[pymodule]
 fn rust_ext(_py: Python, m: &PyModule) -> PyResult<()> {
     // immutable example
@@ -43,6 +45,7 @@ fn rust_ext(_py: Python, m: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 fn jsettlers_u(resource: Resource) -> usize {
     match resource {
         Resource::Brick => 0,
@@ -72,6 +75,7 @@ pub struct PyObservationFormat {
     pub half_height: usize,
     pub width: usize,
     pub height: usize,
+    pub use_python_state: bool,
 }
 
 impl PyObservationFormat {
@@ -87,13 +91,14 @@ impl PyObservationFormat {
 
     #[new]
     #[staticmethod]
-    #[args(half_width = 10, half_height = 5)]
-    pub fn new(half_width: usize, half_height: usize) -> Self {
+    #[args(half_width = 10, half_height = 5, use_python_state = false)]
+    pub fn new(half_width: usize, half_height: usize, use_python_state: bool) -> Self {
         PyObservationFormat {
             half_width,
             half_height,
             width: 2*half_width+1,
             height: 2*half_height+1,
+            use_python_state,
         }
     }
 }
@@ -106,10 +111,9 @@ pub(crate) struct PyCatanObservation {
 }
 
 impl PyCatanObservation {
-    pub(crate) fn new(format: PyObservationFormat, player: PlayerId, state: &State, phase: &Phase, legal_actions: &Vec<bool>) -> PyCatanObservation {
+    pub fn generate_board(format: PyObservationFormat, player: PlayerId, state: &State) -> Array3<i32> {
         let player_count = state.player_count();
-        // # BOARD
-        let mut board = Array3::<i32>::zeros((format.width,format.height,9));
+        let mut board = Array3::<i32>::zeros((format.width,format.height, 13 + 2 * player_count as usize));
         let layout = state.get_layout();
         // ## Hexes [0,7[
         for coord in layout.hexes.iter() {
@@ -118,7 +122,7 @@ impl PyCatanObservation {
                 let (x,y) = format.map(*coord);
                 match hex {
                     LandHex::Desert => { board[(x, y, 5)] = 1; },
-                    LandHex::Prod(res, num) => { board[(x, y, jsettlers_u(res))] = num.into(); },
+                    LandHex::Prod(res, num) => { board[(x, y, res.to_usize())] = num.into(); },
                 }
                 if *coord == state.get_thief_hex() {
                     board[(x, y, 6)] = 1;
@@ -142,8 +146,8 @@ impl PyCatanObservation {
             let (x,y) = format.map(*coord);
             let harbor = state.get_static_harbor(*coord).unwrap();
             match harbor {
-                Harbor::Generic => { board[(x, y, c + 5)] = 1; }
-                Harbor::Special(res) => { board[(x, y, c + jsettlers_u(res))] = 1; }
+                Harbor::Generic => { board[(x, y, c_harbor + 5)] = 1; }
+                Harbor::Special(res) => { board[(x, y, c_harbor + res.to_usize())] = 1; }
                 _ => (),
             }
             let intersection = state.get_dynamic_intersection(*coord).unwrap();
@@ -152,8 +156,11 @@ impl PyCatanObservation {
                 board[(x, y, c_buildings + p.to_usize())] = if is_city { 2 } else { 1 };
             }
         };
+        board
+    }
 
-        // # FLAT
+    pub fn generate_flat(player: PlayerId, state: &State, phase: &Phase) -> Array1<i32> {
+        let player_count = state.player_count();
         let mut flat = Array1::<i32>::zeros(29+(player_count as usize)*8);
         let longest_road = match state.get_longest_road() {
             None => PlayerId::NONE,
@@ -213,6 +220,30 @@ impl PyCatanObservation {
             flat[c_phase+2] = if let DevelopmentPhase::RoadBuildingActive { two_left } = development_phase { if *two_left { 2 } else { 1 } } else { 0 };
             flat[c_phase+3] = if let DevelopmentPhase::YearOfPlentyActive { two_left } = development_phase { if *two_left { 2 } else { 1 } } else { 0 };
         }
+        flat
+    }
+
+    pub(crate) fn new(format: PyObservationFormat, player: PlayerId, state: &State, phase: &Phase, legal_actions: &Vec<bool>) -> PyCatanObservation {
+        // # BOARD
+        let board = PyCatanObservation::generate_board(format, player, state);
+
+        // # FLAT
+        let flat = PyCatanObservation::generate_flat(player, state, phase);
+
+        // # RESULT
+        PyCatanObservation {
+            actions: legal_actions.iter().map(|value| *value).collect(),
+            board,
+            flat,
+        }
+    }
+
+    pub(crate) fn new_python(player: PlayerId, py_state: &PythonState, state: &State, phase: &Phase, legal_actions: &Vec<bool>) -> PyCatanObservation {
+        // # BOARD
+        let board = py_state.boards[player.to_usize()].clone();
+
+        // # FLAT
+        let flat = PyCatanObservation::generate_flat(player, state, phase);
 
         // # RESULT
         PyCatanObservation {

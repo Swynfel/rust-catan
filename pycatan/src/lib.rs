@@ -1,9 +1,11 @@
 mod environment;
+mod python_state;
 mod py_catan_observation;
 
 use pyo3::prelude::*;
 
 use environment::{SingleEnvironment, MultiEnvironment};
+use python_state::PythonState;
 use py_catan_observation::{PyCatanObservation, PyObservationFormat};
 
 #[pymodule]
