@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::fmt;
 
 use super::topology::CoordTopology;
@@ -44,10 +45,25 @@ pub enum DetailedType {
     AIntersection,
 }
 
-#[derive(Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Coord {
     pub x: i8,
     pub y: i8,
+}
+
+impl Ord for Coord {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.y.cmp(&other.y) {
+            Ordering::Equal => self.x.cmp(&other.x),
+            v => v,
+        }
+    }
+}
+
+impl PartialOrd for Coord {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl fmt::Display for Coord {

@@ -1,7 +1,7 @@
 mod layout;
 mod default;
 
-pub use layout::Layout;
+pub use layout::{Layout, print_layout};
 pub use default::DEFAULT;
 
 use super::{Coord, Error};
