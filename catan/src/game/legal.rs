@@ -279,7 +279,7 @@ pub fn legal(phase: &Phase, state: &State, action: Action) -> Result<(), Error> 
             // ## Use Knight Development Card
             //
             Action::DevelopmentKnight => {
-                if *turn_phase != TurnPhase::PreRoll || *turn_phase != TurnPhase::Free {
+                if !turn_phase.unbound() {
                     Err(Error::IncoherentAction(action))
                 } else if *development_phase != DevelopmentPhase::Ready {
                     Err(Error::DevelopmentCardAlreadyPlayed)
@@ -293,7 +293,7 @@ pub fn legal(phase: &Phase, state: &State, action: Action) -> Result<(), Error> 
             // ## Use Road Building Development Card
             //
             Action::DevelopmentRoadBuilding => {
-                if *turn_phase != TurnPhase::PreRoll || *turn_phase != TurnPhase::Free {
+                if !turn_phase.unbound() {
                     Err(Error::IncoherentAction(action))
                 } else if *development_phase != DevelopmentPhase::Ready {
                     Err(Error::DevelopmentCardAlreadyPlayed)
@@ -307,7 +307,7 @@ pub fn legal(phase: &Phase, state: &State, action: Action) -> Result<(), Error> 
             // ## Use Year of Plenty Development Card
             //
             Action::DevelopmentYearOfPlenty => {
-                if *turn_phase != TurnPhase::PreRoll || *turn_phase != TurnPhase::Free {
+                if !turn_phase.unbound() {
                     Err(Error::IncoherentAction(action))
                 } else if *development_phase != DevelopmentPhase::Ready {
                     Err(Error::DevelopmentCardAlreadyPlayed)
@@ -319,7 +319,7 @@ pub fn legal(phase: &Phase, state: &State, action: Action) -> Result<(), Error> 
             },
             Action::ChooseFreeResource { resource } => {
                 if let DevelopmentPhase::YearOfPlentyActive { two_left: _ } = *development_phase {
-                    if *turn_phase == TurnPhase::PreRoll || *turn_phase == TurnPhase::Free {
+                    if turn_phase.unbound() {
                         if state.get_bank_resources()[resource] == 0 {
                             Err(Error::NoMoreResourceInBank(resource))
                         } else {
@@ -336,7 +336,7 @@ pub fn legal(phase: &Phase, state: &State, action: Action) -> Result<(), Error> 
             // ## Use Monopole Development Card
             //
             Action::DevelopmentMonopole { resource: _ } => {
-                if *turn_phase != TurnPhase::PreRoll || *turn_phase != TurnPhase::Free {
+                if !turn_phase.unbound() {
                     Err(Error::IncoherentAction(action))
                 } else if *development_phase != DevelopmentPhase::Ready {
                     Err(Error::DevelopmentCardAlreadyPlayed)

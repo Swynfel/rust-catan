@@ -3,7 +3,7 @@ mod randomy;
 pub mod relative;
 
 use crate::utils::Empty;
-pub use picker_player::{ActionPickerPlayer, IndexPickerPlayer, PickerPlayerTrait};
+pub use picker_player::{ActionPickerPlayer, IndexPickerPlayer, PickerPlayerTrait, generate_possible_actions};
 pub use randomy::Randomy;
 
 use crate::state::{State, PlayerId};

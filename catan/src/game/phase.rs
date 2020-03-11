@@ -35,6 +35,14 @@ impl Phase {
             false
         }
     }
+
+    pub fn is_thief(&self) -> bool {
+        if let Phase::Turn { player: _, turn_phase, development_phase } = self {
+            *turn_phase == TurnPhase::MoveThief || *development_phase == DevelopmentPhase::KnightActive
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -56,4 +64,13 @@ pub enum DevelopmentPhase {
         two_left: bool,
     },
     DevelopmentPlayed,
+}
+
+impl TurnPhase {
+    pub fn unbound(&self) -> bool {
+        match *self {
+            TurnPhase::PreRoll | TurnPhase::Free => true,
+            _ => false,
+        }
+    }
 }

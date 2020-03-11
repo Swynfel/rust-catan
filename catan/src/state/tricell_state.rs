@@ -221,7 +221,7 @@ impl StateTrait for TricellState {
         if self.largest_army == PlayerId::NONE {
             None
         } else {
-            Some((self.largest_army, self.get_player_hand(self.longest_road).knights))
+            Some((self.largest_army, self.get_player_hand(self.largest_army).knights))
         }
     }
 

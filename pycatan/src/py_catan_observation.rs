@@ -223,7 +223,8 @@ impl PyCatanObservation {
         flat
     }
 
-    pub(crate) fn new(format: PyObservationFormat, player: PlayerId, state: &State, phase: &Phase, legal_actions: &Vec<bool>) -> PyCatanObservation {
+    #[allow(dead_code)]
+    pub(crate) fn new_vec(format: PyObservationFormat, player: PlayerId, state: &State, phase: &Phase, legal_actions: &Vec<bool>) -> PyCatanObservation {
         // # BOARD
         let board = PyCatanObservation::generate_board(format, player, state);
 
@@ -238,7 +239,23 @@ impl PyCatanObservation {
         }
     }
 
-    pub(crate) fn new_python(player: PlayerId, py_state: &PythonState, state: &State, phase: &Phase, legal_actions: &Vec<bool>) -> PyCatanObservation {
+    pub(crate) fn new_array(format: PyObservationFormat, player: PlayerId, state: &State, phase: &Phase, legal_actions: Array1<bool>) -> PyCatanObservation {
+        // # BOARD
+        let board = PyCatanObservation::generate_board(format, player, state);
+
+        // # FLAT
+        let flat = PyCatanObservation::generate_flat(player, state, phase);
+
+        // # RESULT
+        PyCatanObservation {
+            actions: legal_actions,
+            board,
+            flat,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn new_python_vec(player: PlayerId, py_state: &PythonState, state: &State, phase: &Phase, legal_actions: &Vec<bool>) -> PyCatanObservation {
         // # BOARD
         let board = py_state.boards[player.to_usize()].clone();
 
@@ -248,6 +265,21 @@ impl PyCatanObservation {
         // # RESULT
         PyCatanObservation {
             actions: legal_actions.iter().map(|value| *value).collect(),
+            board,
+            flat,
+        }
+    }
+
+    pub(crate) fn new_python_array(player: PlayerId, py_state: &PythonState, state: &State, phase: &Phase, legal_actions: Array1<bool>) -> PyCatanObservation {
+        // # BOARD
+        let board = py_state.boards[player.to_usize()].clone();
+
+        // # FLAT
+        let flat = PyCatanObservation::generate_flat(player, state, phase);
+
+        // # RESULT
+        PyCatanObservation {
+            actions: legal_actions,
             board,
             flat,
         }
