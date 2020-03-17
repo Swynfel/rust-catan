@@ -168,10 +168,28 @@ pub fn legal(phase: &Phase, state: &State, action: Action) -> Result<(), Error> 
                 }
             }
             //
+            // ## Discarding
+            //
+            Action::Keep { resources } => {
+                if let TurnPhase::Discard(player) = *turn_phase {
+                    let current = state.get_player_hand(player).resources;
+                    if current >= resources && resources.total() <= (current.total()+1) / 2 {
+                        Ok(())
+                    } else {
+                        Err(Error::NotEnoughResources {
+                            required: resources,
+                            have: current,
+                        })
+                    }
+                } else {
+                    Err(Error::IncoherentAction(action))
+                }
+            }
+            //
             // ## Moving Thief
             //
             Action::MoveThief { hex, victim } => {
-                if *turn_phase == TurnPhase::MoveThief || (*turn_phase != TurnPhase::Discard && *development_phase == DevelopmentPhase::KnightActive) {
+                if *turn_phase == TurnPhase::MoveThief || (!turn_phase.is_discard() && *development_phase == DevelopmentPhase::KnightActive) {
                     if hex == state.get_thief_hex() {
                         Err(Error::ThiefNotMoved { hex })
                     } else {

@@ -52,6 +52,7 @@ impl PythonPlayer {
     fn make_legal_actions(&mut self, phase: &Phase, state: &State) -> Array1<bool> {
         match phase {
             Phase::InitialPlacement { player: _, placing_second: _, placing_road } => self.make_legal_initial_actions(phase, state, *placing_road),
+            Phase::Turn { player: _, turn_phase: TurnPhase::Discard(_), development_phase: _ } => self.make_legal_discards(phase, state),
             Phase::Turn { player: _, turn_phase, development_phase } => self.make_legal_turn_actions(phase, state, *turn_phase, *development_phase),
             _ => Array1::default(self.action_length),
         }
@@ -75,6 +76,12 @@ impl PythonPlayer {
                 legal_actions[i] = legal::legal(phase, state, action).is_ok();
             }
         }
+        legal_actions
+    }
+
+    fn make_legal_discards(&mut self, phase: &Phase, state: &State) -> Array1<bool> {
+        let mut legal_actions = Array1::default(self.action_length);
+        self.update_legal_actions_slice(&mut legal_actions, phase, state, self.action_length - 70, self.action_length);
         legal_actions
     }
 

@@ -15,6 +15,7 @@ pub struct TricellState {
     development_card: DevelopmentCards,
     longest_road: PlayerId,
     largest_army: PlayerId,
+    discards: Vec<(PlayerId,Option<Resources>)>,
     players: Vec<PlayerHand>,
     bank_resources: Resources,
 }
@@ -29,6 +30,7 @@ impl TricellState {
             development_card: DevelopmentCards::new(),
             longest_road: PlayerId::NONE,
             largest_army: PlayerId::NONE,
+            discards: Vec::new(),
             players: vec![PlayerHand::new();players],
             bank_resources: Resources::STARTING_BANK,
         }
@@ -158,6 +160,34 @@ impl StateTrait for TricellState {
 
     fn set_thief_hex(&mut self, coord: Coord) {
         self.thief = coord
+    }
+
+    fn hold_discards(&mut self, discards: Vec<(PlayerId, Option<Resources>)>) {
+        self.discards = discards;
+    }
+
+    fn peek_discards(&self) -> &Vec<(PlayerId, Option<Resources>)> {
+        &self.discards
+    }
+
+    fn set_discard(&mut self, player: PlayerId, resources: Resources) {
+        for pair in self.discards.iter_mut() {
+            if pair.0 == player {
+                pair.1 = Some(resources);
+                return;
+            }
+        }
+    }
+
+    fn apply_discards(&mut self) {
+        let discards = self.discards.clone();
+        self.discards.clear();
+        for pair in discards {
+            let player = pair.0;
+            let resources = pair.1.unwrap();
+            self.get_player_hand_mut(player).resources -= resources;
+            *self.get_bank_resources_mut() += resources;
+        }
     }
 
     // --- player related --- //

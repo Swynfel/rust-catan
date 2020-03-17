@@ -36,11 +36,16 @@ pub enum Action {
     DevelopmentRoadBuilding,
     DevelopmentYearOfPlenty,
     ChooseFreeResource {
-        resource: Resource
+        resource: Resource,
     },
     DevelopmentMonopole {
         resource: Resource,
     },
+
+    Keep {
+        resources: Resources,
+    },
+
     Exit,
 }
 
@@ -59,7 +64,8 @@ pub enum ActionCategory {
     DevelopmentYearOfPlenty = 10,
     ChooseFreeResource = 11,
     DevelopmentMonopole = 12,
-    Exit = 13,
+    Keep = 13,
+    Exit = 14,
 }
 
 impl Action {
@@ -78,11 +84,12 @@ impl Action {
             Action::DevelopmentYearOfPlenty => ActionCategory::DevelopmentYearOfPlenty,
             Action::ChooseFreeResource { resource: _ } => ActionCategory::ChooseFreeResource,
             Action::DevelopmentMonopole { resource: _ }  => ActionCategory::DevelopmentMonopole,
+            Action::Keep { resources: _ } => ActionCategory::Keep,
             Action::Exit => ActionCategory::Exit,
         }
     }
 }
 
 impl ActionCategory {
-    pub const COUNT: usize = 14;
+    pub const COUNT: usize = 15;
 }

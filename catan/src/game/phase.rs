@@ -24,6 +24,7 @@ impl Phase {
     pub fn player(&self) -> PlayerId {
         match self {
             Phase::InitialPlacement { player, placing_second: _, placing_road: _ } => *player,
+            Phase::Turn { player: _, turn_phase: TurnPhase::Discard(player), development_phase: _} => *player,
             Phase::Turn { player, turn_phase: _, development_phase: _} => *player,
             Phase::FinishedGame { winner } => *winner,
         }
@@ -48,7 +49,7 @@ impl Phase {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TurnPhase {
     PreRoll,
-    Discard,
+    Discard(PlayerId),
     MoveThief,
     Free
 }
@@ -70,6 +71,13 @@ impl TurnPhase {
     pub fn unbound(&self) -> bool {
         match *self {
             TurnPhase::PreRoll | TurnPhase::Free => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_discard(&self) -> bool {
+        match *self {
+            TurnPhase::Discard(_) => true,
             _ => false,
         }
     }

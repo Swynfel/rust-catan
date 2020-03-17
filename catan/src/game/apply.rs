@@ -35,23 +35,26 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
         //
         Action::RollDice => {
             let roll = rng.gen_range(1, 7) + rng.gen_range(1, 7);
+            // ### Rolling 7
             if roll == 7 {
-                // TODO: Discard cards
+                let mut discards = Vec::<(PlayerId, Option<Resources>)>::new();
                 for p in 0..state.player_count() {
                     let player = PlayerId::from(p);
                     let player_resources = state.get_player_hand(player).resources;
                     if player_resources.total() >= 7 {
-                        for resource in Resource::ALL.iter() {
-                            let resource_count = player_resources[*resource] / 2;
-                            state.get_player_hand_mut(player).resources[*resource] -= resource_count;
-                            state.get_bank_resources_mut()[*resource] += resource_count;
-                        }
+                        discards.push((player, None))
                     }
                 }
                 if let Phase::Turn { player: _, turn_phase, development_phase: _ } = phase {
-                    *turn_phase = TurnPhase::MoveThief;
+                    if discards.is_empty() {
+                        *turn_phase = TurnPhase::MoveThief;
+                    } else {
+                        *turn_phase = TurnPhase::Discard(discards[0].0);
+                    }
+                    state.hold_discards(discards);
                 }
                 return Some(Notification::ThiefRolled);
+            // ### Rolling Production
             } else {
                 let mut received_resources = vec![Resources::ZERO; state.player_count() as usize];
                 let mut taken_resources = Resources::ZERO;
@@ -105,6 +108,55 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                     *turn_phase = TurnPhase::Free;
                 }
                 return Some(Notification::ResourcesRolled { roll, resources: received_resources });
+            }
+        }
+        //
+        // ## Discard
+        //
+        Action::Keep { resources: kept } => {
+            if let Phase::Turn { player: _ , turn_phase, development_phase: _ } = phase {
+                if let TurnPhase::Discard(player) = turn_phase {
+                    // Get discard equivalent
+                    let current = state.get_player_hand(*player).resources;
+                    let should_discard = current.total() / 2;
+                    let mut discarded = current - kept;
+                    let mut total_discards = discarded.total();
+                    while total_discards > should_discard {
+                        // Randomly keep cards
+                        let mut picked = rng.gen_range(0, total_discards);
+                        for res in Resource::ALL.iter() {
+                            if picked < discarded[*res] {
+                                discarded[*res] -= 1;
+                                break;
+                            } else {
+                                picked -= discarded[*res];
+                            }
+                        }
+                        total_discards -= 1;
+                    }
+                    // Move turn
+                    state.set_discard(*player, discarded);
+                    let mut iter = state.peek_discards().iter();
+                    loop {
+                        match iter.next() {
+                            Some((p, _)) => {
+                                if p == player {
+                                    match iter.next() {
+                                        Some((next_p, _)) => {
+                                            *player = *next_p;
+                                            return None;
+                                        }
+                                        None => {
+                                            *turn_phase = TurnPhase::MoveThief;
+                                            return None; // Should return discard messages
+                                        }
+                                    }
+                                }
+                            }
+                            None => panic!("State should be holding the discarding player's discard")
+                        }
+                    }
+                }
             }
         }
         //

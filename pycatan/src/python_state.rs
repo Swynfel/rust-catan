@@ -70,6 +70,14 @@ impl StateTrait for PythonState {
         self.state.set_thief_hex(coord);
     }
 
+    fn hold_discards(&mut self, discards: Vec<(PlayerId, Option<Resources>)>) { self.state.hold_discards(discards) }
+
+    fn peek_discards(&self) -> &Vec<(PlayerId, Option<Resources>)> { self.state.peek_discards() }
+
+    fn set_discard(&mut self, player: PlayerId, resources: Resources) { self.state.set_discard(player, resources) }
+
+    fn apply_discards(&mut self) { self.state.apply_discards() }
+
     // --- player related --- //
 
     fn get_player_hand(&self, player: PlayerId) -> &PlayerHand { self.state.get_player_hand(player) }

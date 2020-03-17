@@ -1,6 +1,6 @@
 use crate::state::{State, PlayerId};
 use crate::game::{Action, Notification, Error, Phase, legal};
-use crate::utils::Resource;
+use crate::utils::{Resource, Resources};
 use super::CatanPlayer;
 
 pub trait PickerPlayerTrait {
@@ -57,6 +57,19 @@ pub fn generate_possible_actions(possible_actions: &mut Vec<Action>, player: Pla
     }
     for resource in Resource::ALL.iter() {
         possible_actions.push(Action::DevelopmentMonopole { resource: *resource });
+    }
+    // ## Discards
+    // TODO: Cleaner
+    for b in 0..5 {
+        for l in 0..5-b {
+            for o in 0..5-(b+l) {
+                for g in 0..5-(b+l+o) {
+                    let w = 4-(b+l+o+g);
+                    let resources = Resources::new(b,l,o,g,w);
+                    possible_actions.push(Action::Keep { resources })
+                }
+            }
+        }
     }
 }
 

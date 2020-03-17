@@ -71,6 +71,14 @@ pub trait StateTrait {
 
     fn set_thief_hex(&mut self, coord: Coord);
 
+    fn hold_discards(&mut self, discards: Vec<(PlayerId, Option<Resources>)>);
+
+    fn peek_discards(&self) -> &Vec<(PlayerId, Option<Resources>)>;
+
+    fn set_discard(&mut self, player: PlayerId, resources: Resources);
+
+    fn apply_discards(&mut self);
+
     // Player
     fn get_player_hand(&self, player: PlayerId) -> &PlayerHand;
 
