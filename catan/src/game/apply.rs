@@ -8,7 +8,7 @@ use super::{Action, Phase, TurnPhase, DevelopmentPhase, Notification};
 
 /// Applies a legal action
 ///
-/// Modifies a state by applying a given action, and/or changes the phase.action.
+/// Modifies a state by applying a given action, and/or changes the phase action.
 /// The function assumes that the action is legal and that it can be applied without problem.
 /// It is necessary to call [legal](crate::game::legal::legal) beforehand to check if the action can indeed be applied without problem
 pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Action, rng: &mut R) -> Option<Notification> {
@@ -50,8 +50,8 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                         *turn_phase = TurnPhase::MoveThief;
                     } else {
                         *turn_phase = TurnPhase::Discard(discards[0].0);
+                        state.hold_discards(discards);
                     }
-                    state.hold_discards(discards);
                 }
                 return Some(Notification::ThiefRolled);
             // ### Rolling Production
@@ -147,6 +147,7 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                                             return None;
                                         }
                                         None => {
+                                            state.apply_discards();
                                             *turn_phase = TurnPhase::MoveThief;
                                             return None; // Should return discard messages
                                         }
@@ -166,11 +167,11 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
             state.set_thief_hex(hex);
             if victim != player && victim != PlayerId::NONE {
                 if state.get_player_hand(victim).resources.total() > 0 {
-                    let mut resources = state.get_player_hand_mut(victim).resources;
+                    let resources = state.get_player_hand(victim).resources;
                     let mut picked = rng.gen_range(0, resources.total());
                     for res in Resource::ALL.iter() {
                         if picked < resources[*res] {
-                            resources[*res] -= 1;
+                            state.get_player_hand_mut(victim).resources[*res] -= 1;
                             state.get_player_hand_mut(player).resources[*res] += 1;
                             break;
                         } else {
@@ -235,7 +236,7 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
                 for hex in state.intersection_hex_neighbours(intersection).expect(ERROR_MESSAGE) {
                     if let Hex::Land(LandHex::Prod(res, _)) = state.get_static_hex(hex).expect(ERROR_MESSAGE) {
                         state.get_player_hand_mut(player).resources[res] += 1;
-                        state.get_bank_resources()[res] -= 1;
+                        state.get_bank_resources_mut()[res] -= 1;
                     }
                 }
             }
@@ -344,7 +345,7 @@ pub(super) fn apply<R : Rng>(phase: &mut Phase, state: &mut State, action: Actio
             }
         }
         //
-        // ## Use Year of Plenty Development Card
+        // ## Use Monopole Development Card
         //
         Action::DevelopmentMonopole { resource } => {
             state.get_player_hand_mut(player).development_cards.monopole -= 1;

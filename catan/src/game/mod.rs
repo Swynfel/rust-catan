@@ -89,9 +89,41 @@ impl Game {
             }
 
             // Notifies every player of action played
+            let prev_phase = phase;
             self.notify_all(Notification::ActionPlayed { by: phase.player(), action });
             // Applies action
             apply(&mut phase, state, action, rng);
+            let coherence = check_coherence(state);
+            if coherence.is_err() {
+                println!("[INCOHERENCE] {:?} --({:?})-> {:?}", prev_phase, action, phase);
+                panic!("{:?}", coherence.err());
+            }
         }
     }
+}
+
+use crate::utils::{Resource, Resources};
+
+fn check_coherence(state: &State) -> Result<(),String> {
+    let mut players_resources = Resources::ZERO;
+    for p in 0..state.player_count() {
+        let player = PlayerId::from(p);
+        let hand = state.get_player_hand(player).resources;
+        for res in Resource::ALL.iter() {
+            let v = hand[*res];
+            if v > 19 || v < 0 {
+                return Err(format!("Player {:?} has {} of {}", player, v, res));
+            }
+        }
+        players_resources += hand;
+    }
+    let bank_resources = state.get_bank_resources();
+    for res in Resource::ALL.iter() {
+        let v = bank_resources[*res];
+        let pv = players_resources[*res];
+        if v > 19 || v < 0 || pv+v != 19 {
+            return Err(format!("For resource {}: Bank has {} / Players have {}", res, v, pv));
+        }
+    }
+    Ok(())
 }
