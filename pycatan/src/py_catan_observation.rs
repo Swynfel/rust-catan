@@ -2,12 +2,12 @@ use ndarray::{Array1, Array3, ArrayD, ArrayViewD, ArrayViewMutD};
 use pyo3::prelude::*;
 use numpy::{IntoPyArray, PyArrayDyn};
 
-use catan::state::{State, PlayerId};
-use catan::utils::{Hex, LandHex, Harbor, Resource, Coord, DevelopmentCard};
+use catan::state::{State, PlayerHand, PlayerId};
+use catan::utils::{Hex, LandHex, Harbor, Resource, DevelopmentCard};
 use catan::game::{Phase, TurnPhase, DevelopmentPhase};
 use catan::player::relative;
 
-use super::PythonState;
+use super::{PyObservationFormat, PythonState};
 
 #[pymodule]
 fn rust_ext(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -69,45 +69,11 @@ fn jsettlers_resource(value: usize) -> Resource {
 }
 
 #[pyclass]
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub struct PyObservationFormat {
-    pub half_width: usize,
-    pub half_height: usize,
-    pub width: usize,
-    pub height: usize,
-    pub use_python_state: bool,
-}
-
-impl PyObservationFormat {
-    pub fn map(&self, coord: Coord) -> (usize, usize) {
-        let x = (coord.x + self.half_width as i8) as usize;
-        let y = (coord.y + self.half_height as i8) as usize;
-        (x,y)
-    }
-}
-
-#[pymethods]
-impl PyObservationFormat {
-
-    #[new]
-    #[staticmethod]
-    #[args(half_width = 10, half_height = 5, use_python_state = false)]
-    pub fn new(half_width: usize, half_height: usize, use_python_state: bool) -> Self {
-        PyObservationFormat {
-            half_width,
-            half_height,
-            width: 2*half_width+1,
-            height: 2*half_height+1,
-            use_python_state,
-        }
-    }
-}
-
-#[pyclass]
 pub(crate) struct PyCatanObservation {
     pub actions: Array1<bool>,
     pub board: Array3<i32>,
     pub flat: Array1<i32>,
+    pub hidden: Option<Array1<i32>>,
 }
 
 impl PyCatanObservation {
@@ -159,6 +125,41 @@ impl PyCatanObservation {
         board
     }
 
+    // Fills 27 cells
+    pub fn fill_flat_visible(array: &mut Array1::<i32>, index: usize, hand: &PlayerHand, has_longest_road: bool, has_largest_army: bool) {
+        for res in 0..Resource::COUNT {
+            array[index + res] = hand.resources[res].into();
+        }
+        array[index + 5] = hand.road_pieces.into();
+        array[index + 6] = hand.settlement_pieces.into();
+        array[index + 7] = hand.city_pieces.into();
+        array[index + 8] = hand.knights.into();
+        for d in DevelopmentCard::ALL.iter() {
+            array[index + 9 + d.to_usize()] = hand.development_cards[*d].into();
+        }
+        for d in DevelopmentCard::ALL.iter() {
+            array[index + 14 + d.to_usize()] = hand.new_development_cards[*d].into();
+        }
+        for h in 0..6 {
+            array[index + 19 + h] = if hand.harbor[h] { 1 } else { 0 };
+        }
+        array[index + 25] = if has_longest_road { 1 } else { 0 };
+        array[index + 26] = if has_largest_army { 1 } else { 0 };
+        //flat[] = state.get_player_total_vp(player).into();
+    }
+
+    // Fills 8 cells
+    pub fn fill_flat_concealed(array: &mut Array1::<i32>, index: usize, hand: &PlayerHand, has_longest_road: bool, has_largest_army: bool) {
+        array[index] = hand.resources.total().into();
+        array[index + 1] = hand.road_pieces.into();
+        array[index + 2] = hand.settlement_pieces.into();
+        array[index + 3] = hand.city_pieces.into();
+        array[index + 4] = hand.knights.into();
+        array[index + 5] = hand.development_cards.total().into();
+        array[index + 6] = if has_longest_road { 1 } else { 0 };
+        array[index + 7] = if has_largest_army { 1 } else { 0 };
+    }
+
     pub fn generate_flat(player: PlayerId, state: &State, phase: &Phase) -> Array1<i32> {
         let player_count = state.player_count();
         let mut flat = Array1::<i32>::zeros(29+(player_count as usize)*8);
@@ -172,38 +173,13 @@ impl PyCatanObservation {
         };
         // ## Player 27
         let hand = &state.get_player_hand(player);
-        for res in 0..Resource::COUNT {
-            flat[res] = hand.resources[res].into();
-        }
-        flat[5] = hand.road_pieces.into();
-        flat[6] = hand.settlement_pieces.into();
-        flat[7] = hand.city_pieces.into();
-        flat[8] = hand.knights.into();
-        for d in DevelopmentCard::ALL.iter() {
-            flat[9+d.to_usize()] = hand.development_cards[*d].into();
-        }
-        for d in DevelopmentCard::ALL.iter() {
-            flat[14+d.to_usize()] = hand.new_development_cards[*d].into();
-        }
-        for h in 0..6 {
-            flat[19+h] = if hand.harbor[h] { 1 } else { 0 };
-        }
-        flat[25] = if longest_road == player { 1 } else { 0 };
-        flat[26] = if largest_army == player { 1 } else { 0 };
-        //flat[] = state.get_player_total_vp(player).into();
+        PyCatanObservation::fill_flat_visible(&mut flat, 0, hand, longest_road == player, largest_army == player);
         // ## Opponents (p-1)*8
         for opp in 1..player_count {
-            let c_player = 19+(opp as usize)*8;
+            let player_index = 19+(opp as usize)*8;
             let player = relative::offset_to_player_id(player, opp, player_count);
             let hand = &state.get_player_hand(player);
-            flat[c_player] = hand.resources.total().into();
-            flat[c_player+1] = hand.road_pieces.into();
-            flat[c_player+2] = hand.settlement_pieces.into();
-            flat[c_player+3] = hand.city_pieces.into();
-            flat[c_player+4] = hand.knights.into();
-            flat[c_player+5] = hand.development_cards.total().into();
-            flat[c_player+6] = if longest_road == player { 1 } else { 0 };
-            flat[c_player+7] = if largest_army == player { 1 } else { 0 };
+            PyCatanObservation::fill_flat_concealed(&mut flat, player_index, hand, longest_road == player, largest_army == player);
         }
         // ## State 6
         let c_state = 19+(player_count as usize)*8;
@@ -223,20 +199,26 @@ impl PyCatanObservation {
         flat
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn new_vec(format: PyObservationFormat, player: PlayerId, state: &State, phase: &Phase, legal_actions: &Vec<bool>) -> PyCatanObservation {
-        // # BOARD
-        let board = PyCatanObservation::generate_board(format, player, state);
 
-        // # FLAT
-        let flat = PyCatanObservation::generate_flat(player, state, phase);
-
-        // # RESULT
-        PyCatanObservation {
-            actions: legal_actions.iter().map(|value| *value).collect(),
-            board,
-            flat,
-        }
+    pub fn generate_hidden(player: PlayerId, state: &State, _phase: &Phase) -> Array1<i32> {
+        let player_count = state.player_count();
+        let longest_road = match state.get_longest_road() {
+            None => PlayerId::NONE,
+            Some((player_id, _)) => player_id,
+        };
+        let largest_army = match state.get_largest_army() {
+            None => PlayerId::NONE,
+            Some((player_id, _)) => player_id,
+        };
+        let mut hidden = Array1::<i32>::zeros((player_count as usize - 1)*27);
+        // ## Opponents (p-1)*27
+        for opp in 1..player_count {
+            let player_index = (opp as usize - 1)*27;
+            let player = relative::offset_to_player_id(player, opp, player_count);
+            let hand = &state.get_player_hand(player);
+            PyCatanObservation::fill_flat_concealed(&mut hidden, player_index, hand, longest_road == player, largest_army == player);
+        };
+        hidden
     }
 
     pub(crate) fn new_array(format: PyObservationFormat, player: PlayerId, state: &State, phase: &Phase, legal_actions: Array1<bool>) -> PyCatanObservation {
@@ -246,42 +228,42 @@ impl PyCatanObservation {
         // # FLAT
         let flat = PyCatanObservation::generate_flat(player, state, phase);
 
-        // # RESULT
-        PyCatanObservation {
-            actions: legal_actions,
-            board,
-            flat,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn new_python_vec(player: PlayerId, py_state: &PythonState, state: &State, phase: &Phase, legal_actions: &Vec<bool>) -> PyCatanObservation {
-        // # BOARD
-        let board = py_state.boards[player.to_usize()].clone();
-
-        // # FLAT
-        let flat = PyCatanObservation::generate_flat(player, state, phase);
-
-        // # RESULT
-        PyCatanObservation {
-            actions: legal_actions.iter().map(|value| *value).collect(),
-            board,
-            flat,
-        }
-    }
-
-    pub(crate) fn new_python_array(player: PlayerId, py_state: &PythonState, state: &State, phase: &Phase, legal_actions: Array1<bool>) -> PyCatanObservation {
-        // # BOARD
-        let board = py_state.boards[player.to_usize()].clone();
-
-        // # FLAT
-        let flat = PyCatanObservation::generate_flat(player, state, phase);
+        // # HIDDEN
+        let hidden = if format.include_hidden {
+            Some(PyCatanObservation::generate_hidden(player, state, phase))
+        } else {
+            None
+        };
 
         // # RESULT
         PyCatanObservation {
             actions: legal_actions,
             board,
             flat,
+            hidden,
+        }
+    }
+
+    pub(crate) fn new_python_array(format: PyObservationFormat, player: PlayerId, py_state: &PythonState, state: &State, phase: &Phase, legal_actions: Array1<bool>) -> PyCatanObservation {
+        // # BOARD
+        let board = py_state.boards[player.to_usize()].clone();
+
+        // # FLAT
+        let flat = PyCatanObservation::generate_flat(player, state, phase);
+
+        // # HIDDEN
+        let hidden = if format.include_hidden {
+            Some(PyCatanObservation::generate_hidden(player, state, phase))
+        } else {
+            None
+        };
+
+        // # RESULT
+        PyCatanObservation {
+            actions: legal_actions,
+            board,
+            flat,
+            hidden,
         }
     }
 }

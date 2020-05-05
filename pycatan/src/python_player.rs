@@ -189,7 +189,7 @@ impl CatanPlayer for PythonPlayer {
             Some((
                 self.id,
                 match state.as_any().downcast_ref::<PythonState>() {
-                    Some(python_state) => PyCatanObservation::new_python_array(self.position, python_state, state, phase, legal_actions),
+                    Some(python_state) => PyCatanObservation::new_python_array(self.format, self.position, python_state, state, phase, legal_actions),
                     None => PyCatanObservation::new_array(self.format, self.position, state, phase, legal_actions),
                 }
             ))

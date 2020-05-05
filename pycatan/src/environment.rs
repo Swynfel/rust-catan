@@ -1,5 +1,6 @@
 use ndarray::Array1;
 use pyo3::prelude::*;
+use pyo3::types::PyTuple;
 use numpy::convert::IntoPyArray;
 use std::thread;
 use std::sync::mpsc::{channel, Sender, Receiver};
@@ -14,22 +15,30 @@ use catan::board::setup::random_default_setup_existing_state;
 use catan::board::layout;
 use super::{PythonState, PyCatanObservation, PyObservationFormat, PythonPlayer};
 
+
+fn to_py_tuple(py: Python, hidden_state: bool, observation: Option<(u8, PyCatanObservation)>) -> PyObject {
+    if let Some((id, observation)) = observation {
+        if hidden_state {
+            PyTuple::new(py, &[id.into_py(py), observation.board.into_pyarray(py).to_object(py), observation.flat.into_pyarray(py).to_object(py), observation.hidden.unwrap().into_pyarray(py).to_object(py), observation.actions.into_pyarray(py).to_object(py), false.into_py(py)])
+        } else {
+            PyTuple::new(py, &[id.into_py(py), observation.board.into_pyarray(py).to_object(py), observation.flat.into_pyarray(py).to_object(py), observation.actions.into_pyarray(py).to_object(py), false.into_py(py)])
+        }
+    } else {
+        if hidden_state {
+            PyTuple::new(py, &[0.into_py(py), py.None(), py.None(), py.None(), py.None(), true.into_py(py)])
+        } else {
+            PyTuple::new(py, &[0.into_py(py), py.None(), py.None(), py.None(), true.into_py(py)])
+        }
+    }.to_object(py)
+}
+
 #[pyclass]
 pub struct SingleEnvironment {
     action_sender: Sender<u16>,
     observation_receiver: Receiver<Option<(u8, PyCatanObservation)>>,
     result_receiver: Receiver<(u8,bool)>,
     game_thread: thread::JoinHandle<()>,
-}
-
-impl SingleEnvironment {
-    fn to_py_tuple(py: Python, observation: Option<(u8, PyCatanObservation)>) -> (PyObject, PyObject, PyObject, PyObject) {
-        if let Some((_, observation)) = observation {
-            (observation.board.into_pyarray(py).to_object(py), observation.flat.into_pyarray(py).to_object(py), observation.actions.into_pyarray(py).to_object(py), false.into_py(py))
-        } else {
-            (py.None(), py.None(), py.None(), true.into_py(py))
-        }
-    }
+    include_hidden: bool,
 }
 
 #[pymethods]
@@ -57,17 +66,18 @@ impl SingleEnvironment {
             observation_receiver,
             result_receiver,
             game_thread,
+            include_hidden: format.include_hidden,
         }
     }
 
-    fn start(&mut self, py: Python) -> PyResult<(PyObject, PyObject, PyObject, PyObject)> {
-        Ok(SingleEnvironment::to_py_tuple(py, self.observation_receiver.recv().expect("Failed to read start observation")))
+    fn start(&mut self, py: Python) -> PyResult<PyObject> {
+        Ok(to_py_tuple(py, self.include_hidden, self.observation_receiver.recv().expect("Failed to read start observation")))
     }
 
-    fn play(&mut self, py: Python, action: u16) -> PyResult<(PyObject, PyObject, PyObject, PyObject)> {
+    fn play(&mut self, py: Python, action: u16) -> PyResult<PyObject> {
         self.action_sender.send(action).expect("Failed to send action");
         self.game_thread.thread().unpark();
-        Ok(SingleEnvironment::to_py_tuple(py, self.observation_receiver.recv().expect("Failed to read play observation")))
+        Ok(to_py_tuple(py, self.include_hidden, self.observation_receiver.recv().expect("Failed to read play observation")))
     }
 
     fn result(&mut self, _py: Python) -> PyResult<(u8,bool)> {
@@ -83,16 +93,7 @@ pub struct MultiEnvironment {
     observation_receiver: Receiver<Option<(u8, PyCatanObservation)>>,
     result_receivers: Vec<Receiver<(u8,bool)>>,
     game_thread: thread::JoinHandle<()>,
-}
-
-impl MultiEnvironment {
-    fn to_py_tuple(py: Python, observation: Option<(u8, PyCatanObservation)>) -> (u8, PyObject, PyObject, PyObject, PyObject) {
-        if let Some((id, observation)) = observation {
-            (id, observation.board.into_pyarray(py).to_object(py), observation.flat.into_pyarray(py).to_object(py), observation.actions.into_pyarray(py).to_object(py), false.into_py(py))
-        } else {
-            (0, py.None(), py.None(), py.None(), true.into_py(py))
-        }
-    }
+    include_hidden: bool,
 }
 
 #[pymethods]
@@ -138,17 +139,18 @@ impl MultiEnvironment {
             observation_receiver,
             result_receivers,
             game_thread,
+            include_hidden: format.include_hidden,
         }
     }
 
-    fn start(&mut self, py: Python) -> PyResult<(u8, PyObject, PyObject, PyObject, PyObject)> {
-        Ok(MultiEnvironment::to_py_tuple(py, self.observation_receiver.recv().expect("Failed to read start observation")))
+    fn start(&mut self, py: Python) -> PyResult<PyObject> {
+        Ok(to_py_tuple(py, self.include_hidden, self.observation_receiver.recv().expect("Failed to read start observation")))
     }
 
-    fn play(&mut self, py: Python, player: u8, action: u16) -> PyResult<(u8, PyObject, PyObject, PyObject, PyObject)> {
+    fn play(&mut self, py: Python, player: u8, action: u16) -> PyResult<PyObject> {
         self.action_senders[player as usize].send(action).expect("Failed to send action");
         self.game_thread.thread().unpark();
-        Ok(MultiEnvironment::to_py_tuple(py, self.observation_receiver.recv().expect("Failed to read play observation")))
+        Ok(to_py_tuple(py, self.include_hidden, self.observation_receiver.recv().expect("Failed to read play observation")))
     }
 
     fn result(&mut self, py: Python) -> PyResult<(PyObject, u8)> {
